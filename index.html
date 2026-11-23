@@ -1,0 +1,3701 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2b3a2f">
+<meta name="description" content="微光谷物语 - 原创像素风农场生活模拟游戏：清理荒废农场、耕种收获、钓鱼、建造设施、结识村民，逐步恢复小镇。">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>微光谷物语 · Glimmer Vale</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%B1%3C/text%3E%3C/svg%3E">
+<style>
+/* ============ 微光谷物语 · Glimmer Vale ============ */
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { width:100%; height:100%; overflow:hidden; background:#151a14; }
+body { font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+  user-select:none; -webkit-user-select:none; touch-action:none; overscroll-behavior:none; }
+#app { position:fixed; inset:0; }
+canvas { image-rendering:pixelated; image-rendering:crisp-edges; }
+#game { position:absolute; inset:0; width:100%; height:100%; display:block; background:#0e130d; }
+.hidden { display:none !important; }
+.ui { position:absolute; z-index:10; }
+
+/* ---------- HUD ---------- */
+#hud { top:0; left:0; right:0; padding:8px 10px; display:flex; justify-content:space-between;
+  pointer-events:none; padding-top:calc(8px + env(safe-area-inset-top)); }
+#hud-left, #hud-right { display:flex; flex-direction:column; gap:5px; }
+#hud-right { align-items:flex-end; }
+#hud-date, #hud-clock, #hud-gold, #hud-energy {
+  background:rgba(20,26,18,.82); border:2px solid #5b4632; border-radius:8px;
+  color:#f4e9c8; font-size:13px; padding:4px 10px; width:max-content;
+  text-shadow:1px 1px 0 #000; box-shadow:0 2px 0 rgba(0,0,0,.4); }
+#hud-clock { font-size:17px; letter-spacing:1px; }
+#hud-date span { margin-right:6px; }
+#hud-weather { margin-left:2px; }
+#hud-gold { display:flex; align-items:center; gap:6px; font-size:15px; }
+.coin { width:14px; height:14px; display:inline-block; border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, #ffe98a, #d9a521 65%, #8a6410); border:1px solid #8a6410; }
+#hud-energy { position:relative; width:130px; height:22px; padding:0; overflow:hidden; }
+#energy-fill { position:absolute; inset:2px; width:100%; transform-origin:left;
+  background:linear-gradient(#8fd45a,#4d9934); border-radius:5px; transition:transform .3s; }
+#energy-text { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:12px; color:#fff; text-shadow:1px 1px 0 #000; }
+#hud-btns { display:flex; gap:6px; pointer-events:auto; }
+.icon-btn { width:40px; height:40px; font-size:19px; border:2px solid #5b4632; border-radius:9px;
+  background:rgba(20,26,18,.85); color:#f4e9c8; cursor:pointer; box-shadow:0 2px 0 rgba(0,0,0,.4); }
+.icon-btn:active { transform:translateY(2px); box-shadow:none; }
+
+/* ---------- 快捷栏 ---------- */
+#hotbar { bottom:calc(10px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+  display:flex; gap:6px; }
+.hb-slot { width:52px; height:52px; border:2px solid #5b4632; border-radius:10px;
+  background:rgba(20,26,18,.85); position:relative; display:flex; align-items:center; justify-content:center; }
+.hb-slot.sel { border-color:#ffd964; background:rgba(60,50,20,.9); box-shadow:0 0 8px rgba(255,217,100,.5); }
+.hb-slot canvas { width:40px; height:40px; pointer-events:none; }
+.hb-slot .cnt { position:absolute; right:3px; bottom:1px; font-size:11px; color:#fff; text-shadow:1px 1px 0 #000; }
+.hb-slot .key { position:absolute; left:4px; top:1px; font-size:10px; color:#cbb98a; }
+.hb-slot .name { position:absolute; top:-20px; left:50%; transform:translateX(-50%); white-space:nowrap;
+  font-size:10px; color:#f4e9c8; text-shadow:1px 1px 0 #000; display:none; }
+.hb-slot.sel .name { display:block; }
+
+/* ---------- 触屏控件 ---------- */
+#joystick { left:16px; bottom:calc(70px + env(safe-area-inset-bottom)); }
+#joy-base { width:120px; height:120px; border-radius:50%; background:rgba(20,26,18,.45);
+  border:2px solid rgba(244,233,200,.35); position:relative; }
+#joy-stick { width:52px; height:52px; border-radius:50%; background:rgba(244,233,200,.7);
+  position:absolute; left:32px; top:32px; border:2px solid rgba(91,70,50,.6); }
+#action-btns { right:16px; bottom:calc(76px + env(safe-area-inset-bottom)); display:flex; gap:12px; align-items:flex-end; }
+.round-btn { width:64px; height:64px; border-radius:50%; border:3px solid #5b4632;
+  background:rgba(48,60,40,.9); color:#f4e9c8; font-size:16px; font-weight:bold;
+  box-shadow:0 3px 0 rgba(0,0,0,.45); cursor:pointer; }
+#btn-act { background:rgba(140,80,40,.92); width:74px; height:74px; font-size:18px; }
+.round-btn:active { transform:translateY(3px); box-shadow:none; }
+
+/* ---------- 面板 ---------- */
+#panel-wrap { position:absolute; inset:0; z-index:30; background:rgba(8,10,8,.6);
+  display:flex; align-items:center; justify-content:center; padding:14px; }
+#panel-wrap.above { z-index:60; }
+#panel { width:min(560px, 94vw); max-height:86vh; background:#2a2317; border:3px solid #6b5334;
+  border-radius:14px; display:flex; flex-direction:column; box-shadow:0 8px 24px rgba(0,0,0,.6); }
+#panel-head { display:flex; justify-content:space-between; align-items:center;
+  padding:10px 14px; border-bottom:2px solid #6b5334; }
+#panel-title { color:#ffd964; font-size:17px; font-weight:bold; letter-spacing:2px; }
+#panel-close { background:none; border:none; color:#cbb98a; font-size:18px; cursor:pointer; padding:2px 8px; }
+#panel-body { padding:12px 14px; overflow-y:auto; color:#f4e9c8; font-size:14px; line-height:1.6;
+  -webkit-overflow-scrolling:touch; touch-action:pan-y; }
+
+/* 对话框 */
+#dialog { position:absolute; left:50%; bottom:calc(90px + env(safe-area-inset-bottom));
+  transform:translateX(-50%); width:min(560px, 92vw); z-index:25; background:rgba(24,20,12,.94);
+  border:3px solid #6b5334; border-radius:12px; padding:12px 16px 10px; cursor:pointer; }
+#dialog-name { color:#ffd964; font-size:14px; font-weight:bold; margin-bottom:4px; }
+#dialog-text { color:#f4e9c8; font-size:15px; line-height:1.6; min-height:44px; }
+#dialog-next { text-align:right; color:#8fa06b; font-size:12px; margin-top:4px; animation:bob 1s infinite; }
+@keyframes bob { 50% { transform:translateY(3px); } }
+
+/* 背包网格 */
+.inv-grid { display:grid; grid-template-columns:repeat(auto-fill, 58px); gap:8px; justify-content:center; }
+.inv-slot { width:58px; height:58px; border:2px solid #5b4632; border-radius:9px; background:#1e180e;
+  position:relative; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.inv-slot.sel { border-color:#ffd964; }
+.inv-slot canvas { width:44px; height:44px; }
+.inv-slot .cnt { position:absolute; right:3px; bottom:1px; font-size:11px; color:#fff; text-shadow:1px 1px 0 #000; }
+.inv-empty { text-align:center; color:#8a7c5c; padding:30px 0; }
+.inv-info { margin-top:10px; min-height:38px; font-size:13px; color:#cbb98a; border-top:1px dashed #5b4632; padding-top:8px; }
+.inv-info b { color:#ffd964; }
+.item-row { display:flex; justify-content:space-between; align-items:center; padding:7px 4px;
+  border-bottom:1px dashed #4a3a24; gap:8px; }
+.item-row .nm { display:flex; align-items:center; gap:8px; }
+.item-row canvas { width:30px; height:30px; }
+.item-row .pr { color:#ffd964; white-space:nowrap; }
+.btn { display:inline-block; background:#7c5a2e; border:2px solid #a5793c; color:#ffe9b8; border-radius:8px;
+  padding:6px 14px; font-size:13px; cursor:pointer; box-shadow:0 2px 0 rgba(0,0,0,.4); }
+.btn:active { transform:translateY(2px); box-shadow:none; }
+.btn.primary { background:#3f7d3a; border-color:#5aa254; }
+.btn.danger { background:#8c3b30; border-color:#b45a4c; }
+.btn:disabled { opacity:.45; pointer-events:none; }
+
+/* 任务 */
+.q-item { border:2px solid #4a3a24; border-radius:10px; padding:10px 12px; margin-bottom:10px; background:#221c10; }
+.q-item.done { border-color:#5a7d3a; opacity:.75; }
+.q-name { color:#ffd964; font-weight:bold; font-size:14px; display:flex; justify-content:space-between; }
+.q-name .tag { font-size:11px; padding:1px 8px; border-radius:8px; background:#5a4632; color:#ffe9b8; }
+.q-item.done .tag { background:#3f6d2a; }
+.q-desc { font-size:13px; color:#cbb98a; margin-top:4px; }
+.q-prog { margin-top:6px; height:10px; background:#171208; border-radius:5px; overflow:hidden; border:1px solid #4a3a24; }
+.q-prog i { display:block; height:100%; background:linear-gradient(#8fd45a,#4d9934); }
+.q-reward { font-size:12px; color:#8fa06b; margin-top:4px; }
+
+/* 地图面板 */
+.map-canvas-wrap { display:flex; justify-content:center; }
+#mini-map { width:min(480px, 88vw); border:2px solid #6b5334; border-radius:10px; }
+.npc-list { margin-top:10px; }
+.npc-row { display:flex; justify-content:space-between; padding:5px 2px; font-size:13px;
+  border-bottom:1px dashed #4a3a24; }
+.npc-row .loc { color:#8fd45a; }
+.npc-row .away { color:#8a7c5c; }
+.npc-dot { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+
+/* 结算 */
+.settle-day { text-align:center; color:#ffd964; font-size:18px; letter-spacing:2px; margin-bottom:10px; }
+.settle-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.settle-cell { background:#221c10; border:2px solid #4a3a24; border-radius:10px; padding:8px 10px; text-align:center; }
+.settle-cell .v { font-size:20px; color:#ffd964; font-weight:bold; }
+.settle-cell .k { font-size:12px; color:#cbb98a; }
+.settle-log { margin-top:10px; font-size:12px; color:#a89a78; max-height:120px; overflow-y:auto;
+  border-top:1px dashed #4a3a24; padding-top:8px; }
+.progress-big { margin:10px 0; }
+.progress-big .bar { height:16px; background:#171208; border:2px solid #4a3a24; border-radius:8px; overflow:hidden; }
+.progress-big .bar i { display:block; height:100%; background:linear-gradient(90deg,#5aa254,#ffd964); transition:width .6s; }
+.progress-big .lbl { font-size:12px; color:#cbb98a; margin-top:4px; text-align:center; }
+
+/* 菜单 */
+.menu-list { display:flex; flex-direction:column; gap:10px; padding:6px 4px; }
+.menu-list .menu-btn { width:100%; }
+
+/* 开始画面 */
+#start-screen { position:absolute; inset:0; z-index:50; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:8px; background:#151a14; overflow:hidden; }
+#start-canvas { width:100%; height:100%; position:absolute; inset:0; object-fit:cover; opacity:.95; }
+#start-title { position:relative; text-align:center; margin-bottom:4px; text-shadow:0 3px 0 rgba(0,0,0,.55); }
+#start-title h1 { font-size:clamp(34px, 9vw, 64px); color:#ffe9b8; letter-spacing:10px;
+  text-shadow:0 4px 0 #3a2c1a, 0 0 24px rgba(255,217,100,.35); }
+#start-title .en { font-size:clamp(12px, 3vw, 18px); color:#8fd45a; letter-spacing:8px; margin-top:2px; }
+#start-title .sub { font-size:clamp(11px, 2.6vw, 14px); color:#cbb98a; margin-top:8px; letter-spacing:4px; }
+#start-btns { position:relative; display:flex; flex-direction:column; gap:12px; margin-top:16px; }
+.menu-btn { min-width:min(260px, 70vw); padding:12px 20px; font-size:17px; border-radius:12px;
+  border:3px solid #6b5334; background:rgba(42,35,23,.92); color:#ffe9b8; cursor:pointer;
+  box-shadow:0 4px 0 rgba(0,0,0,.45); letter-spacing:3px; }
+.menu-btn.small { min-width:min(200px,50vw); font-size:13px; padding:9px 16px; letter-spacing:2px; }
+.menu-btn:active { transform:translateY(3px); box-shadow:none; }
+#btn-continue { border-color:#5aa254; }
+#start-foot { position:relative; margin-top:18px; font-size:11px; color:#7a6f55; text-align:center; padding:0 16px; }
+
+/* 钓鱼 */
+#fishing { position:absolute; inset:0; z-index:28; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; background:rgba(8,12,20,.45); }
+#fish-canvas { width:min(240px, 56vw); background:#1d3040; border:4px solid #6b5334; border-radius:14px; }
+#fish-tip { margin-top:12px; color:#f4e9c8; font-size:13px; background:rgba(20,26,18,.85);
+  padding:6px 14px; border-radius:8px; }
+
+/* 提示 */
+#toasts { position:absolute; top:calc(76px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
+  z-index:40; display:flex; flex-direction:column; gap:6px; align-items:center; pointer-events:none; width:100%; }
+.toast { background:rgba(24,20,12,.92); border:2px solid #6b5334; color:#ffe9b8; font-size:13px;
+  padding:7px 16px; border-radius:20px; animation:toast-in .25s; max-width:86vw; text-align:center; }
+.toast.good { border-color:#5aa254; color:#d6f5c8; }
+.toast.bad { border-color:#b45a4c; color:#ffd6cc; }
+@keyframes toast-in { from { opacity:0; transform:translateY(-8px);} }
+#tile-hint { position:absolute; z-index:15; background:rgba(24,20,12,.9); border:2px solid #6b5334;
+  color:#ffe9b8; font-size:12px; padding:4px 10px; border-radius:8px; pointer-events:none;
+  transform:translate(-50%, -100%); white-space:nowrap; }
+
+/* 帮助 */
+.help-sec { margin-bottom:12px; }
+.help-sec h3 { color:#ffd964; font-size:14px; margin-bottom:4px; }
+.help-sec p { font-size:13px; color:#cbb98a; }
+kbd { background:#171208; border:1px solid #5b4632; border-radius:4px; padding:0 6px;
+  font-size:12px; color:#ffe9b8; font-family:inherit; }
+
+@media (max-width: 720px) {
+  #hud-date, #hud-gold { font-size:12px; }
+  #hud-energy { width:100px; }
+  .icon-btn { width:36px; height:36px; font-size:16px; }
+  .hb-slot { width:46px; height:46px; }
+  .hb-slot canvas { width:36px; height:36px; }
+  #hotbar { bottom:calc(8px + env(safe-area-inset-bottom)); }
+  #dialog { bottom:calc(150px + env(safe-area-inset-bottom)); }
+}
+body.touch-ui #joystick { display:block; }
+body.touch-ui #action-btns { display:flex; }
+
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <!-- 顶部HUD -->
+  <div id="hud" class="ui hidden">
+    <div id="hud-left">
+      <div id="hud-date">
+        <span id="hud-season"></span><span id="hud-day"></span><span id="hud-year"></span>
+        <span id="hud-weather"></span>
+      </div>
+      <div id="hud-clock">6:00</div>
+    </div>
+    <div id="hud-right">
+      <div id="hud-gold"><span class="coin"></span><span id="gold-num">0</span></div>
+      <div id="hud-energy"><div id="energy-fill"></div><span id="energy-text">100</span></div>
+      <div id="hud-btns">
+        <button class="icon-btn" id="btn-bag" title="背包 (I)">🎒</button>
+        <button class="icon-btn" id="btn-quest" title="任务 (J)">📜</button>
+        <button class="icon-btn" id="btn-map" title="地图 (M)">🗺️</button>
+        <button class="icon-btn" id="btn-menu" title="菜单 (Esc)">⚙️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 快捷栏 -->
+  <div id="hotbar" class="ui hidden"></div>
+
+  <!-- 摇杆与按键（触屏） -->
+  <div id="joystick" class="ui hidden"><div id="joy-base"><div id="joy-stick"></div></div></div>
+  <div id="action-btns" class="ui hidden">
+    <button id="btn-tool" class="round-btn">工具</button>
+    <button id="btn-act" class="round-btn">互动</button>
+  </div>
+
+  <!-- 对话框 -->
+  <div id="dialog" class="panel hidden">
+    <div id="dialog-name"></div>
+    <div id="dialog-text"></div>
+    <div id="dialog-next">▼ 继续</div>
+  </div>
+
+  <!-- 通用面板（背包/任务/地图/菜单/商店/建造/出售/结算） -->
+  <div id="panel-wrap" class="hidden">
+    <div id="panel">
+      <div id="panel-head"><span id="panel-title"></span><button id="panel-close">✕</button></div>
+      <div id="panel-body"></div>
+    </div>
+  </div>
+
+  <!-- 钓鱼小游戏 -->
+  <div id="fishing" class="hidden">
+    <canvas id="fish-canvas" width="220" height="300"></canvas>
+    <div id="fish-tip">按住 / 触摸屏幕 抬起鱼钩，让鱼保持在框内！</div>
+  </div>
+
+  <!-- 提示气泡 -->
+  <div id="toasts"></div>
+
+  <!-- 交互提示 -->
+  <div id="tile-hint" class="hidden"></div>
+
+  <!-- 开始画面 -->
+  <div id="start-screen">
+    <canvas id="start-canvas" width="480" height="270"></canvas>
+    <div id="start-title">
+      <h1>微光谷物语</h1>
+      <p class="en">GLIMMER VALE</p>
+      <p class="sub">— 像素农场生活模拟 —</p>
+    </div>
+    <div id="start-btns">
+      <button id="btn-new" class="menu-btn">🌱 新的旅程</button>
+      <button id="btn-continue" class="menu-btn hidden">📖 继续旅程</button>
+      <button id="btn-help" class="menu-btn small">玩法说明</button>
+    </div>
+    <p id="start-foot">原创像素游戏 · 键盘 WASD/方向键移动 · 触屏虚拟摇杆</p>
+  </div>
+</div>
+<script>
+/* ============ 微光谷物语 · 数据层 ============ */
+window.G = window.G || {};
+(function () {
+  'use strict';
+  G.TS = 16;                      // 瓦片像素
+  G.SPRING = 0; G.SUMMER = 1; G.FALL = 2; G.WINTER = 3;
+  G.SEASON_NAMES = ['春', '夏', '秋', '冬'];
+  G.SEASON_COLORS = {
+    grassA: ['#5f9e3e', '#4f9438', '#a5813c', '#cfd8dc'],
+    grassB: ['#6fb04a', '#5aa243', '#b28e46', '#dde3e6'],
+    leaf:   ['#71b04e', '#4f9438', '#d08a3a', null],
+    water:  ['#3f76b5', '#3f76b5', '#3e6ea8', '#7fa7c9'],
+  };
+  G.WEATHER_NAMES = { sun: '☀️ 晴', cloud: '☁️ 多云', rain: '🌧️ 雨', storm: '⛈️ 暴雨', snow: '❄️ 雪' };
+
+  /* ---------------- 作物 ---------------- */
+  // stage 图: 0 种子 1 幼苗 2 生长 3 成熟
+  G.CROPS = {
+    turnip:  { name: '小萝卜', seasons: [0], days: 4, seed: 'turnip_seed',  sell: 35,  seedCost: 20, color: '#e86379' },
+    potato:  { name: '土豆',   seasons: [0], days: 6, seed: 'potato_seed',  sell: 75,  seedCost: 50, color: '#cfa763' },
+    tomato:  { name: '番茄',   seasons: [1], days: 5, seed: 'tomato_seed',  sell: 65,  seedCost: 42, color: '#e0453a' },
+    melon:   { name: '西瓜',   seasons: [1], days: 7, seed: 'melon_seed',   sell: 140, seedCost: 85, color: '#3f9e4d' },
+    pumpkin: { name: '南瓜',   seasons: [2], days: 7, seed: 'pumpkin_seed', sell: 175, seedCost: 105, color: '#e08a2d' },
+    snowfl:  { name: '雪绒花', seasons: [3], days: 5, seed: 'snowfl_seed',  sell: 95,  seedCost: 58, color: '#bcd9ff' },
+  };
+
+  /* ---------------- 物品 ---------------- */
+  const I = (id, name, cat, sell, desc) => ({ id, name, cat, sell, desc });
+  G.ITEMS = {};
+  [
+    // 工具
+    I('axe', '斧头', 'tool', 0, '砍伐树桩与树木，获得木头。'),
+    I('pick', '十字镐', 'tool', 0, '敲碎石块，获得石头。'),
+    I('hoe', '锄头', 'tool', 0, '清理杂草、开垦农田。'),
+    I('can', '水壶', 'tool', 0, '给作物浇水，作物每天需要水。'),
+    I('rod', '鱼竿', 'tool', 0, '在湖边或码头钓鱼。'),
+    // 材料
+    I('wood', '木头', 'mat', 3, '建造设施的基本材料。'),
+    I('stone', '石头', 'mat', 3, '结实的建筑材料。'),
+    I('fiber', '纤维', 'mat', 2, '搓绳子的好材料。'),
+    // 种子（由作物表生成）
+    // 农产品
+    I('turnip', '小萝卜', 'crop', 35, '爽脆的春季萝卜。可食用 +15 体力。'),
+    I('potato', '土豆', 'crop', 75, '沉甸甸的春季土豆。可食用 +22 体力。'),
+    I('tomato', '番茄', 'crop', 65, '酸甜多汁的夏季番茄。可食用 +18 体力。'),
+    I('melon', '西瓜', 'crop', 140, '盛夏的甜蜜巨果。可食用 +35 体力。'),
+    I('pumpkin', '南瓜', 'crop', 175, '秋收之星，能做一整桌菜。可食用 +30 体力。'),
+    I('snowfl', '雪绒花', 'crop', 95, '寒冬绽放的奇迹之花。可食用 +10 体力。'),
+    // 觅食
+    I('berry', '野莓', 'forage', 25, '森林灌木上的红果子。可食用 +10 体力。'),
+    I('mushroom', '蘑菇', 'forage', 40, '秋雨后的林中珍品。可食用 +14 体力。'),
+    I('winterroot', '雪参', 'forage', 45, '雪地里刨出的补品根茎。可食用 +25 体力。'),
+    I('flower', '野花', 'forage', 15, '路边的小花，莉莉最喜欢。'),
+    // 牧场
+    I('egg', '鸡蛋', 'food', 45, '鸡舍每天产的新鲜蛋。可食用 +20 体力。'),
+    // 鱼
+    I('fish_sardine', '小银鱼', 'fish', 30, '湖里常见的小鱼。'),
+    I('fish_carp', '鲫鱼', 'fish', 55, '沉稳的湖底住民。'),
+    I('fish_perch', '河鲈', 'fish', 85, '条纹漂亮的猎手。'),
+    I('fish_trout', '虹鳟', 'fish', 130, '桥那头深水区才有的珍品。'),
+    I('fish_legend', '月影鱼', 'fish', 600, '传说月圆之夜才会浮现的幻之鱼。'),
+  ].forEach(it => G.ITEMS[it.id] = it);
+  Object.keys(G.CROPS).forEach(cid => {
+    const c = G.CROPS[cid];
+    G.ITEMS[c.seed] = I(c.seed, c.name + '种子', 'seed', Math.floor(c.seedCost / 2), c.name + '的种子（' + c.days + '天成熟）。');
+    G.ITEMS[c.seed].seedCost = c.seedCost;
+    G.ITEMS[c.seed].cropId = cid;
+  });
+  G.EAT_ENERGY = { turnip: 15, potato: 22, tomato: 18, melon: 35, pumpkin: 30, snowfl: 10, berry: 10, mushroom: 14, winterroot: 25, egg: 20 };
+  G.EATABLE = Object.keys(G.EAT_ENERGY);
+
+  /* ---------------- 建造设施 ---------------- */
+  G.BUILDS = {
+    sprinkler: { name: '洒水器', cost: { gold: 150, wood: 4 }, w: 1, h: 1,
+      desc: '每天清晨自动浇灌上下左右四格作物。放在农田里。' },
+    scarecrow: { name: '稻草人', cost: { gold: 80, wood: 3 }, w: 1, h: 1,
+      desc: '守护周围 5 格内的作物，夜里乌鸦不敢来偷吃。' },
+    coop: { name: '鸡舍', cost: { gold: 500, wood: 12 }, w: 2, h: 2,
+      desc: '养一只母鸡，每天清晨产一枚鸡蛋。放在农场空地。' },
+    bridge: { name: '小桥', cost: { gold: 200, wood: 20 }, special: true,
+      desc: '修复湖边断掉的栈桥，通往深水区钓点（稀有鱼）。' },
+  };
+
+  /* ---------------- 村民 ---------------- */
+  // 日程时段: [开始分钟, 结束分钟, 地图, 格x, 格y, 站姿表情/对话索引]
+  G.NPCS = [
+    {
+      id: 'greg', name: '镇长 格雷戈里', hair: '#b8b8c0', shirt: '#3b5dc9', pants: '#4a3b2a',
+      slots: [
+        { f: 0, t: 510, map: null },
+        { f: 510, t: 780, map: 'town', x: 17, y: 13, greet: '早上好！小镇就拜托你啦。' },
+        { f: 780, t: 960, map: 'town', x: 26, y: 8, greet: '玛莎店里的种子很靠谱。' },
+        { f: 960, t: 1230, map: 'town', x: 17, y: 15, greet: '广场的老井，是我爷爷那辈修的。' },
+        { f: 1230, t: 1330, map: 'town', x: 27, y: 15, greet: '傍晚的湖风最舒服了。' },
+        { f: 1330, t: 1440, map: null },
+      ],
+      lines: ['当年你爷爷把农场打理得漂漂亮亮的。', '把农场振兴起来，小镇就会重新热闹！', '有困难就去杂货店和锯木场问问。'],
+    },
+    {
+      id: 'martha', name: '杂货商 玛莎', hair: '#a8642c', shirt: '#c94f7c', pants: '#5a4632',
+      slots: [
+        { f: 0, t: 540, map: null },
+        { f: 540, t: 1020, map: 'town', x: 21, y: 8, greet: '欢迎光临！店里种子齐全~' },
+        { f: 1020, t: 1230, map: 'town', x: 17, y: 12, greet: '下午出来透透气。' },
+        { f: 1230, t: 1290, map: 'town', x: 26, y: 12, greet: '晚风里散步真惬意。' },
+        { f: 1290, t: 1440, map: null },
+      ],
+      lines: ['每种作物只在特定季节生长哦。', '雨天不用浇水，大自然会帮忙~', '出货箱卖东西很方便，杂货店也收。'],
+    },
+    {
+      id: 'zhou', name: '木匠 老周', hair: '#3a3a3a', shirt: '#c98a3b', pants: '#3e4a5a',
+      slots: [
+        { f: 0, t: 540, map: null },
+        { f: 540, t: 960, map: 'forest', x: 14, y: 8, greet: '想建点什么？来我这儿看看图纸。' },
+        { f: 960, t: 1230, map: 'town', x: 24, y: 15, greet: '下午来广场看看老朋友们。' },
+        { f: 1230, t: 1440, map: null },
+      ],
+      lines: ['好木头要选纹理紧的。', '洒水器能帮你省下浇水的力气。', '修好湖边的栈桥，能钓到大家伙！'],
+    },
+    {
+      id: 'hai', name: '渔夫 阿海', hair: '#2c4a8a', shirt: '#3f9e8a', pants: '#2a3a4a',
+      slots: [
+        { f: 0, t: 360, map: null },
+        { f: 360, t: 720, map: 'lake', x: 22, y: 12, greet: '清晨的鱼最饿，咬钩最勤！' },
+        { f: 720, t: 840, map: 'lake', x: 21, y: 10, greet: '换了个背风的位子。' },
+        { f: 840, t: 900, map: null },
+        { f: 900, t: 1200, map: 'lake', x: 22, y: 12, greet: '午后的鱼躲阴影里，要有耐心。' },
+        { f: 1200, t: 1260, map: null },
+        { f: 1260, t: 1320, map: 'lake', x: 20, y: 12, greet: '黄昏也是个不错的窗口。' },
+        { f: 1320, t: 1440, map: null },
+      ],
+      lines: ['水深的地方鱼更金贵。', '浮标一沉就提竿，手要快！', '修好栈桥能去深水区，钓虹鳟。'],
+    },
+    {
+      id: 'lily', name: '小女孩 莉莉', hair: '#e8c56a', shirt: '#7cc94f', pants: '#c9594f',
+      slots: [
+        { f: 0, t: 600, map: null },
+        { f: 600, t: 840, map: 'town', x: 15, y: 14, greet: '哥哥姐姐早呀！' },
+        { f: 840, t: 1080, map: 'forest', x: 20, y: 14, greet: '森林里有好多野花！' },
+        { f: 1080, t: 1140, map: null },
+        { f: 1140, t: 1260, map: 'town', x: 19, y: 16, greet: '广场喷泉会发光诶！' },
+        { f: 1260, t: 1440, map: null },
+      ],
+      lines: ['等你农场丰收，给我吃最大南瓜！', '野花可以送人哦……比如送给我？', '昨晚我梦见会发光的大鱼！'],
+    },
+  ];
+
+  /* ---------------- 任务 ---------------- */
+  G.QUESTS = [
+    { id: 'q1', name: '清理荒地', stat: 'cleared', goal: 12, reward: { gold: 120 },
+      desc: '用锄头/斧头/镐清理农场的杂草、石块与树桩 ×12' },
+    { id: 'q2', name: '播种希望', stat: 'planted', goal: 5, reward: { gold: 150, items: { turnip_seed: 3 } },
+      desc: '开垦土地并播下 5 颗种子' },
+    { id: 'q3', name: '初次收获', stat: 'harvested', goal: 3, reward: { gold: 200, items: { pumpkin_seed: 2 } },
+      desc: '收获 3 份自己种的作物' },
+    { id: 'q4', name: '邻里相认', stat: 'talked', goal: 4, reward: { gold: 150 },
+      desc: '和 4 位不同的村民聊天（他们每天出现在不同地点）' },
+    { id: 'q5', name: '垂钓入门', stat: 'fish', goal: 1, reward: { gold: 200 },
+      desc: '在湖边钓上 1 条鱼' },
+    { id: 'q6', name: '木料订单', type: 'deliver', item: 'wood', goal: 20, reward: { gold: 500 },
+      desc: '老周需要木料：把 20 个木头交给锯木场（自动结算）' },
+    { id: 'q7', name: '设施建设', stat: 'built', goal: 1, reward: { gold: 300 },
+      desc: '在木匠处建造任意 1 个设施（洒水器/稻草人/鸡舍/小桥）' },
+    { id: 'q8', name: '小镇商路', stat: 'earned', goal: 1500, reward: { gold: 400 },
+      desc: '累计出售货物赚取 1500 金' },
+    { id: 'q9', name: '渔获渐丰', stat: 'fish', goal: 5, reward: { gold: 350 },
+      desc: '累计钓上 5 条鱼' },
+    { id: 'q10', name: '丰收节', stat: 'harvested', goal: 20, reward: { gold: 800 },
+      desc: '累计收获 20 份作物，让小镇重燃生机！' },
+  ];
+
+  /* ---------------- 鱼获权重 ---------------- */
+  // pos: 0 浅水(岸/码头) 1 深水(桥后)
+  G.FISH_TABLE = [
+    { id: 'fish_sardine', w: [40, 10], min: 0 },
+    { id: 'fish_carp', w: [30, 25], min: 0 },
+    { id: 'fish_perch', w: [18, 30], min: 0 },
+    { id: 'fish_trout', w: [6, 40], min: 1 },
+    { id: 'fish_legend', w: [1, 8], min: 1 },
+  ];
+})();
+
+;
+/* ============ 微光谷物语 · 地图 ============ */
+window.G = window.G || {};
+(function () {
+  'use strict';
+  function M(w, h, fill) {
+    const g = [];
+    for (let y = 0; y < h; y++) g.push(new Array(w).fill(fill || '.'));
+    return g;
+  }
+  function rect(g, x0, y0, x1, y1, ch) {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++)
+      if (g[y] && x >= 0 && x < g[y].length) g[y][x] = ch;
+  }
+  function border(g, x0, y0, x1, y1, ch) { rect(g, x0, y0, x1, y0, ch); rect(g, x0, y1, x1, y1, ch); rect(g, x0, y0, x0, y1, ch); rect(g, x1, y0, x1, y1, ch); }
+
+  /* ---------------- 农场 40x28 ---------------- */
+  function buildFarm() {
+    const g = M(40, 28);
+    rect(g, 0, 0, 39, 27, '.');
+    // 边界树林带
+    rect(g, 0, 0, 39, 1, ','); rect(g, 0, 26, 39, 27, ',');
+    rect(g, 0, 0, 1, 27, ','); rect(g, 38, 0, 39, 27, ',');
+    // 池塘（早期钓鱼点）
+    rect(g, 2, 20, 7, 25, 'w');
+    // 通往各出口的小路
+    rect(g, 36, 13, 37, 14, 'p');            // 东→镇
+    rect(g, 5, 1, 6, 2, 'p');                // 北→森林
+    rect(g, 31, 25, 32, 26, 'p');            // 南→湖
+    rect(g, 6, 2, 6, 8, 'p'); rect(g, 6, 8, 9, 8, 'p');  // 家门口小路
+    return {
+      id: 'farm', name: '微风农场', w: 40, h: 28, terrain: g,
+      buildings: [
+        { type: 'home', x: 4, y: 3, w: 4, h: 4, door: { x: 5, y: 6 } },
+      ],
+      props: [
+        { type: 'bin', x: 10, y: 6 },
+        { type: 'sign', x: 8, y: 8, text: '爷爷的农场：用锄头清理杂草，开垦土地，开始新生活吧！' },
+        { type: 'flowerbed', x: 3, y: 8 }, { type: 'flowerbed', x: 8, y: 3 },
+        { type: 'stump', x: 33, y: 3, static: true }, { type: 'tree', x: 2, y: 5, static: true },
+        { type: 'tree', x: 36, y: 20, static: true }, { type: 'tree', x: 2, y: 17, static: true },
+        { type: 'fence', x: 3, y: 7 }, { type: 'fence', x: 4, y: 7 }, { type: 'fence', x: 6, y: 7 },
+        { type: 'fence', x: 7, y: 7 }, { type: 'fence', x: 3, y: 2 }, { type: 'fence', x: 3, y: 3 },
+        { type: 'fence', x: 3, y: 4 }, { type: 'fence', x: 3, y: 5 }, { type: 'fence', x: 3, y: 6 },
+        { type: 'lamp', x: 11, y: 4 },
+      ],
+      exits: [
+        { x: 38, y: 12, w: 1, h: 4, to: 'town', tx: 1, ty: 13 },
+        { x: 4, y: 0, w: 3, h: 1, to: 'forest', tx: 6, ty: 24 },
+        { x: 30, y: 27, w: 3, h: 1, to: 'lake', tx: 18, ty: 2 },
+      ],
+      spawn: { x: 6, y: 7 },
+      dynamic: true, // 杂物/树/农田由存档管理
+    };
+  }
+
+  /* ---------------- 小镇 36x26 ---------------- */
+  function buildTown() {
+    const g = M(36, 26);
+    rect(g, 0, 0, 35, 25, '.');
+    rect(g, 0, 0, 35, 1, ','); rect(g, 0, 25, 35, 25, ',');
+    rect(g, 0, 0, 0, 25, ','); rect(g, 35, 0, 35, 25, ',');
+    // 主路：西入口 → 广场 → 南出口 / 北出口
+    rect(g, 1, 13, 34, 14, 'p');
+    rect(g, 17, 15, 19, 24, 'p');
+    rect(g, 16, 1, 19, 2, 'p');
+    rect(g, 14, 9, 22, 17, 'p'); // 广场
+    return {
+      id: 'town', name: '微光镇', w: 36, h: 26, terrain: g,
+      buildings: [
+        { type: 'shop', x: 20, y: 4, w: 4, h: 4, door: { x: 22, y: 7 }, label: '玛莎杂货店' },
+        { type: 'mayor', x: 8, y: 4, w: 4, h: 4, label: '镇长家' },
+        { type: 'cottage', x: 28, y: 4, w: 4, h: 4, label: '民居' },
+      ],
+      props: [
+        { type: 'well', x: 18, y: 11 },
+        { type: 'lamp', x: 14, y: 10 }, { type: 'lamp', x: 21, y: 10 },
+        { type: 'lamp', x: 14, y: 16 }, { type: 'lamp', x: 21, y: 16 },
+        { type: 'flowerbed', x: 15, y: 9 }, { type: 'flowerbed', x: 20, y: 9 },
+        { type: 'flowerbed', x: 25, y: 17 }, { type: 'flowerbed', x: 10, y: 17 },
+        { type: 'sign', x: 2, y: 12, text: '欢迎来到微光镇 ← 农场在西边' },
+        { type: 'sign', x: 17, y: 3, text: '北：林间小路 · 南：湖畔步道' },
+        { type: 'bench', x: 24, y: 13 }, { type: 'bench', x: 11, y: 13 },
+        { type: 'tree', x: 26, y: 20, static: true }, { type: 'tree', x: 6, y: 20, static: true },
+        { type: 'tree', x: 32, y: 12, static: true },
+      ],
+      exits: [
+        { x: 0, y: 12, w: 1, h: 3, to: 'farm', tx: 37, ty: 13 },
+        { x: 16, y: 25, w: 4, h: 1, to: 'lake', tx: 18, ty: 2 },
+        { x: 16, y: 0, w: 4, h: 1, to: 'forest', tx: 34, ty: 22 },
+      ],
+      spawn: { x: 2, y: 13 },
+    };
+  }
+
+  /* ---------------- 森林 36x26 ---------------- */
+  function buildForest() {
+    const g = M(36, 26);
+    rect(g, 0, 0, 35, 25, ',');
+    // 林间空地
+    rect(g, 3, 8, 33, 23, '.');
+    rect(g, 5, 1, 7, 2, 'p'); rect(g, 6, 2, 6, 8, 'p');
+    rect(g, 6, 8, 15, 8, 'p'); // 锯木场前
+    rect(g, 30, 21, 34, 22, 'p'); // 东→镇
+    rect(g, 4, 23, 6, 24, 'p');  // 南→农场
+    rect(g, 6, 23, 6, 20, 'p'); rect(g, 6, 20, 10, 20, 'p');
+    return {
+      id: 'forest', name: '月影森林', w: 36, h: 26, terrain: g,
+      buildings: [
+        { type: 'sawmill', x: 13, y: 4, w: 4, h: 4, door: { x: 14, y: 7 }, label: '老周锯木场' },
+      ],
+      props: [
+        { type: 'sign', x: 5, y: 24, text: '南：微风农场 · 东：微光镇' },
+        { type: 'sign', x: 31, y: 20, text: '东：微光镇' },
+        { type: 'logpile', x: 18, y: 8 },
+        { type: 'flowerbed', x: 22, y: 12 },
+        { type: 'tree', x: 4, y: 9, static: true }, { type: 'tree', x: 10, y: 9, static: true },
+        { type: 'tree', x: 20, y: 9, static: true }, { type: 'tree', x: 28, y: 8, static: true },
+        { type: 'tree', x: 33, y: 10, static: true }, { type: 'tree', x: 3, y: 15, static: true },
+        { type: 'tree', x: 33, y: 16, static: true }, { type: 'tree', x: 12, y: 22, static: true },
+        { type: 'tree', x: 17, y: 23, static: true },
+      ],
+      // 觅食点（季节产物）
+      forageSpots: [
+        { x: 8, y: 12 }, { x: 22, y: 16 }, { x: 28, y: 20 }, { x: 12, y: 18 },
+        { x: 25, y: 10 }, { x: 16, y: 13 }, { x: 31, y: 14 }, { x: 9, y: 21 },
+      ],
+      exits: [
+        { x: 4, y: 25, w: 3, h: 1, to: 'farm', tx: 6, ty: 2 },
+        { x: 35, y: 20, w: 1, h: 3, to: 'town', tx: 18, ty: 2 },
+      ],
+      spawn: { x: 6, y: 23 },
+    };
+  }
+
+  /* ---------------- 湖边 32x24 ---------------- */
+  function buildLake() {
+    const g = M(32, 24);
+    rect(g, 0, 0, 31, 23, '.');
+    rect(g, 0, 0, 31, 1, ','); rect(g, 0, 0, 0, 23, ',');
+    // 大湖
+    rect(g, 13, 7, 31, 23, 'w');
+    rect(g, 10, 10, 31, 23, 'w');
+    // 码头
+    rect(g, 20, 10, 24, 13, 'P');
+    // 断桥缺口（可建造小桥）
+    rect(g, 24, 14, 25, 15, 'P');
+    // 缺口下的小岛
+    rect(g, 23, 18, 27, 21, '.');
+    rect(g, 24, 19, 26, 20, ',');
+    rect(g, 16, 1, 19, 6, 'p'); // 北→镇
+    return {
+      id: 'lake', name: '月影湖', w: 32, h: 24, terrain: g,
+      buildings: [],
+      props: [
+        { type: 'sign', x: 17, y: 2, text: '北：微光镇 · 码头尽头栈桥断裂，找老周修复吧' },
+        { type: 'sign', x: 26, y: 18, text: '深水钓点：虹鳟与传说中的月影鱼' },
+        { type: 'reed', x: 12, y: 12 }, { type: 'reed', x: 11, y: 16 }, { type: 'reed', x: 14, y: 8 },
+        { type: 'reed', x: 22, y: 22 }, { type: 'reed', x: 9, y: 9 },
+        { type: 'rock', x: 8, y: 14, static: true }, { type: 'rock', x: 5, y: 18, static: true },
+        { type: 'tree', x: 3, y: 4, static: true }, { type: 'tree', x: 7, y: 3, static: true },
+        { type: 'rock', x: 27, y: 18, static: true }, { type: 'reed', x: 28, y: 21 },
+      ],
+      // 断桥缺口瓦片（建桥后可通行，纵向连接码头与小岛）
+      bridgeTiles: [{ x: 24, y: 16 }, { x: 24, y: 17 }],
+      islandRect: { x: 23, y: 18, w: 5, h: 4 },
+      exits: [
+        { x: 16, y: 0, w: 4, h: 1, to: 'town', tx: 18, ty: 23 },
+      ],
+      spawn: { x: 18, y: 2 },
+    };
+  }
+
+  /* ---------------- 家（室内） ---------------- */
+  function buildHome() {
+    const g = M(10, 8);
+    rect(g, 0, 0, 9, 0, 'W');
+    rect(g, 0, 1, 9, 7, 'f');
+    rect(g, 0, 7, 9, 7, 'f');
+    return {
+      id: 'home', name: '家', w: 10, h: 8, terrain: g, indoor: true,
+      buildings: [], props: [
+        { type: 'bed', x: 2, y: 2, w: 1, h: 2 },
+        { type: 'rug', x: 4, y: 4, w: 3, h: 2 },
+        { type: 'table', x: 7, y: 2 },
+        { type: 'plant', x: 8, y: 5 },
+      ],
+      exits: [{ x: 4, y: 7, w: 2, h: 1, to: 'farm', tx: 5, ty: 7 }],
+      spawn: { x: 5, y: 6 },
+    };
+  }
+
+  G.MAP_BUILDERS = { farm: buildFarm, town: buildTown, forest: buildForest, lake: buildLake, home: buildHome };
+  G.MAPS = {};
+  Object.keys(G.MAP_BUILDERS).forEach(k => { G.MAPS[k] = G.MAP_BUILDERS[k](); });
+
+  // 建筑类型贴图配置（sprites.js 使用）
+  G.BUILDING_STYLE = {
+    home:    { roof: '#b5533c', roofDark: '#8c3d2e', wall: '#d9b98a', wallLine: '#c4a273', door: '#7c4a2a', label: '爷爷的家' },
+    shop:    { roof: '#4f8a3d', roofDark: '#3a6a2c', wall: '#e8d9b0', wallLine: '#cbbb8e', door: '#5a3a20', label: '杂货店', sign: 'seed' },
+    mayor:   { roof: '#5a6a9e', roofDark: '#43507a', wall: '#e0d5c0', wallLine: '#c4b7a0', door: '#5a3a20', label: '镇长家', sign: 'star' },
+    cottage: { roof: '#c98a3b', roofDark: '#9c6a2a', wall: '#e8d0a8', wallLine: '#d0b488', door: '#5a3a20', label: '民居', sign: 'flower' },
+    sawmill: { roof: '#7a5a3a', roofDark: '#5c4227', wall: '#b09468', wallLine: '#9a7f56', door: '#4a3018', label: '锯木场', sign: 'axe' },
+  };
+
+  // 农场动态物初始散布参数
+  G.FARM_SCATTER = {
+    field: { x0: 10, y0: 10, x1: 30, y1: 20 },
+    weeds: 26, rocks: 10, stumps: 6, trees: 8,
+    avoid: [ // 矩形禁区（建筑/路/出口/池塘周边）
+      { x: 2, y: 1, w: 12, h: 10 }, { x: 30, y: 24, w: 9, h: 3 },
+      { x: 35, y: 10, w: 5, h: 6 }, { x: 3, y: 19, w: 6, h: 8 },
+      { x: 4, y: 0, w: 4, h: 9 }, { x: 28, y: 24, w: 6, h: 4 },
+    ],
+  };
+})();
+
+;
+/* ============ 微光谷物语 · 像素美术（全程序化生成，无外部素材） ============ */
+window.G = window.G || {};
+(function () {
+  'use strict';
+  const TS = G.TS;
+
+  function cv(w, h) {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const x = c.getContext('2d');
+    x.imageSmoothingEnabled = false;
+    return { c, x };
+  }
+  G._cv = cv;
+
+  // 字符画 → canvas
+  G.makeSprite = function (rows, pal, scale) {
+    scale = scale || 1;
+    const { c, x } = cv(rows[0].length * scale, rows.length * scale);
+    for (let y = 0; y < rows.length; y++) {
+      const row = rows[y];
+      for (let i = 0; i < row.length; i++) {
+        const col = pal[row[i]];
+        if (col) { x.fillStyle = col; x.fillRect(i * scale, y * scale, scale, scale); }
+      }
+    }
+    return c;
+  };
+  function px(x, i, j, col, w, h) { x.fillStyle = col; x.fillRect(i, j, w || 1, h || 1); }
+  function disc(x, cx, cy, r, col) {
+    x.fillStyle = col;
+    for (let j = -r; j <= r; j++) {
+      const w = Math.floor(Math.sqrt(r * r - j * j) + 0.35);
+      x.fillRect(cx - w, cy + j, w * 2 + 1, 1);
+    }
+  }
+  function hash(a, b) { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >> 13)) * 1274126177; return ((h ^ (h >> 16)) >>> 0) / 4294967295; }
+
+  /* ---------------- 角色帧 ---------------- */
+  const CHAR_PAL = (p) => ({
+    '.': null, k: '#262018', s: '#f2c896', a: p.hat || p.hair, A: p.hatDark || p.hairDark || '#00000033',
+    h: p.hair, c: p.shirt, C: p.shirtDark || p.shirt, p: p.pants, b: '#5a4028',
+  });
+  const F = {
+    down0: [
+      '................',
+      '......aaaa......',
+      '....aaaaaaaa....',
+      '...aaaaaaaaaa...',
+      '..aaaaaaaaaaaa..',
+      '....ssssssss....',
+      '....skssssks....',
+      '.....ssssss.....',
+      '....cccccccc....',
+      '...cCccccccCc...',
+      '..sccccccccccs..',
+      '...CCCCCCCCCC...',
+      '....pppppppp....',
+      '....ppp..ppp....',
+      '...bbb....bbb...',
+      '................',
+    ],
+    down1: [
+      '................',
+      '......aaaa......',
+      '....aaaaaaaa....',
+      '...aaaaaaaaaa...',
+      '..aaaaaaaaaaaa..',
+      '....ssssssss....',
+      '....skssssks....',
+      '.....ssssss.....',
+      '....cccccccc....',
+      '...cCccccccCc...',
+      '..sccccccccccs..',
+      '...CCCCCCCCCC...',
+      '....pppppppp....',
+      '...pppp..pppp...',
+      '..bbb......bbb..',
+      '................',
+    ],
+    down2: [
+      '................',
+      '......aaaa......',
+      '....aaaaaaaa....',
+      '...aaaaaaaaaa...',
+      '..aaaaaaaaaaaa..',
+      '....ssssssss....',
+      '....skssssks....',
+      '.....ssssss.....',
+      '....cccccccc....',
+      '...cCccccccCc...',
+      '..sccccccccccs..',
+      '...CCCCCCCCCC...',
+      '....pppppppp....',
+      '....pppppppp....',
+      '....bbb..bbb....',
+      '................',
+    ],
+    up0: [
+      '................',
+      '......aaaa......',
+      '....aaaaaaaa....',
+      '...aaaaaaaaaa...',
+      '..aaaaaaaaaaaa..',
+      '....hhhhhhhh....',
+      '....hhhhhhhh....',
+      '.....hhhhhh.....',
+      '....cccccccc....',
+      '...cccccccccc...',
+      '..sccccccccccs..',
+      '...CCCCCCCCCC...',
+      '....pppppppp....',
+      '....ppp..ppp....',
+      '...bbb....bbb...',
+      '................',
+    ],
+    up1: [
+      '................',
+      '......aaaa......',
+      '....aaaaaaaa....',
+      '...aaaaaaaaaa...',
+      '..aaaaaaaaaaaa..',
+      '....hhhhhhhh....',
+      '....hhhhhhhh....',
+      '.....hhhhhh.....',
+      '....cccccccc....',
+      '...cccccccccc...',
+      '..sccccccccccs..',
+      '...CCCCCCCCCC...',
+      '....pppppppp....',
+      '...pppp..pppp...',
+      '..bbb......bbb..',
+      '................',
+    ],
+    up2: [
+      '................',
+      '......aaaa......',
+      '....aaaaaaaa....',
+      '...aaaaaaaaaa...',
+      '..aaaaaaaaaaaa..',
+      '....hhhhhhhh....',
+      '....hhhhhhhh....',
+      '.....hhhhhh.....',
+      '....cccccccc....',
+      '...cccccccccc...',
+      '..sccccccccccs..',
+      '...CCCCCCCCCC...',
+      '....pppppppp....',
+      '....pppppppp....',
+      '....bbb..bbb....',
+      '................',
+    ],
+    side0: [
+      '................',
+      '......aaaa......',
+      '....aaaaaaaa....',
+      '...aaaaaaaaaaa..',
+      '..aaaaaaaaaaaa..',
+      '....ssssssss....',
+      '....ssssksss....',
+      '.....ssssss.....',
+      '....cccccccc....',
+      '....cccccccc....',
+      '...ccccccccs....',
+      '...cCcccccccc...',
+      '....pppppppp....',
+      '....pppppppp....',
+      '.....bbbbbb.....',
+      '................',
+    ],
+    side1: [
+      '................',
+      '......aaaa......',
+      '....aaaaaaaa....',
+      '...aaaaaaaaaaa..',
+      '..aaaaaaaaaaaa..',
+      '....ssssssss....',
+      '....ssssksss....',
+      '.....ssssss.....',
+      '....cccccccc....',
+      '....cccccccc....',
+      '...ccccccccs....',
+      '...cCcccccccc...',
+      '....pppppppp....',
+      '...ppp....ppp...',
+      '..bbb......bbb..',
+      '................',
+    ],
+    side2: [
+      '................',
+      '......aaaa......',
+      '....aaaaaaaa....',
+      '...aaaaaaaaaaa..',
+      '..aaaaaaaaaaaa..',
+      '....ssssssss....',
+      '....ssssksss....',
+      '.....ssssss.....',
+      '....cccccccc....',
+      '....cccccccc....',
+      '...ccccccccs....',
+      '...cCcccccccc...',
+      '....pppppppp....',
+      '....pppppppp....',
+      '......bbbb......',
+      '................',
+    ],
+  };
+  function charSet(p) {
+    const pal = CHAR_PAL(p);
+    const s = (rows) => G.makeSprite(rows, pal);
+    const flip = (c) => {
+      const { c: o, x } = cv(c.width, c.height);
+      x.save(); x.translate(c.width, 0); x.scale(-1, 1); x.drawImage(c, 0, 0); x.restore();
+      return o;
+    };
+    return {
+      down: [s(F.down0), s(F.down1), s(F.down2)],
+      up: [s(F.up0), s(F.up1), s(F.up2)],
+      side: [s(F.side0), s(F.side1), s(F.side2)],
+      left: [flip(s(F.side0)), flip(s(F.side1)), flip(s(F.side2))],
+    };
+  }
+
+  /* ---------------- 场景道具（手绘字符画） ---------------- */
+  const P = { '.': null, k: '#2a2018', d: '#3a2c1a' };
+  const PROP_DEFS = {
+    weed: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '......g.........',
+      '..g...gg...g....',
+      '..gg..gg..gg....',
+      '..gg.ggg..gg.g..',
+      '...ggggg.ggg.gg.',
+      '...ggggggggggg..',
+      '..gggggggggggg..',
+      '..GgggggggGggg..',
+      '...GggggggGg....',
+      '....GGggGG......',
+      '................',
+      '................',
+    ],
+    rock: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '.....kkkkk......',
+      '....krrrrrk.....',
+      '...krrWrrrrk....',
+      '..krrrrrrrrrk...',
+      '..krWrrrrrrrk...',
+      '..krrrrrWrrrk...',
+      '.krrrrrrrrrrrk..',
+      '.krWrrrrrrrrik..',
+      '.kriirrrrriiik..',
+      '..kiiiiiiiiik...',
+      '...kkkkkkkkk....',
+      '................',
+    ],
+    stump: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '...kkkkkkkkk....',
+      '..ktttttttttk...',
+      '..ktWttttrttk...',
+      '..ktrrtttrrtk...',
+      '..ktttttrtttk...',
+      '.kTttttttttTtk..',
+      '.kTTttttttTTtk..',
+      '.ktttttttttttk..',
+      '..ktttttttttk...',
+      '..ktTTTTTTTtk...',
+      '...kkkkkkkkk....',
+      '................',
+    ],
+    log: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '..kkkkkkkkkkkk..',
+      '.kttttttttttttk.',
+      'ktttttttttttttTk',
+      'ktWttttttttttTk.',
+      'kttttttttttttttk',
+      'kTttttttttttttk.',
+      '.kttttttttttttk.',
+      '..kkkkkkkkkkkk..',
+      '................',
+      '................',
+      '................',
+    ],
+    sign: [
+      '................',
+      '.kkkkkkkkkkkkk..',
+      '.kwwwwwwwwwwwk..',
+      '.kwWWWWWWWWWwk..',
+      '.kwwwwwwwwwwwk..',
+      '.kwWWWwwWWWWwk..',
+      '.kwwwwwwwwwwwk..',
+      '.kkkkkkkkkkkkk..',
+      '......kTk.......',
+      '......kTk.......',
+      '......kTk.......',
+      '......kTk.......',
+      '......kTk.......',
+      '.....kTTTk......',
+      '....kkkkkkk.....',
+      '................',
+    ],
+    lamp: [
+      '................',
+      '.....kkkkk......',
+      '....kyyyyyk.....',
+      '....kyYyyyyk....',
+      '....kyyyyyk.....',
+      '.....kkkkk......',
+      '.......k........',
+      '.......k........',
+      '.......k........',
+      '.......k........',
+      '.......k........',
+      '.......k........',
+      '.......k........',
+      '......kkk.......',
+      '.....kkkkk......',
+      '................',
+    ],
+    fence: [
+      '................',
+      '................',
+      '.kk..........kk.',
+      '.kwwkkkkkkkkwwk.',
+      '.kwwwwwwwwwwwwk.',
+      '.kwwwwwwwwwwwwk.',
+      '.kkkkkkkkkkkkkk.',
+      '................',
+      '.kk..........kk.',
+      '.kwwkkkkkkkkwwk.',
+      '.kwwwwwwwwwwwwk.',
+      '.kwwwwwwwwwwwwk.',
+      '.kkkkkkkkkkkkkk.',
+      '................',
+      '................',
+      '................',
+    ],
+    reed: [
+      '................',
+      '................',
+      '.....g..g.......',
+      '..g..g..g..g....',
+      '..g.ggg.g..g....',
+      '...ggg.ggg.g....',
+      '...ggggggggg....',
+      '....ggggggg.....',
+      '....gggggg......',
+      '.....gggg.......',
+      '.....Ggg........',
+      '.....Gg.........',
+      '................',
+      '................',
+      '................',
+      '................',
+    ],
+    bench: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '.kkkkkkkkkkkkkk.',
+      '.kwwwwwwwwwwwwk.',
+      '.kwwwwwwwwwwwwk.',
+      '.kkkkkkkkkkkkkk.',
+      '..kk........kk..',
+      '..kwk......kwk..',
+      '..kwk......kwk..',
+      '..kwk......kwk..',
+      '..kkk......kkk..',
+      '................',
+      '................',
+      '................',
+    ],
+    flowerbed: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '...f...f....f...',
+      '..fff.ff..fff...',
+      '...f...f....f...',
+      '..kkkkkkkkkkkk..',
+      '.kmmmmmmmmmmmmk.',
+      '.kmMmmMMmmmMMmk.',
+      '.kmmmmmmmmmmmmk.',
+      '.kMMmmmMMmmMMmk.',
+      '.kkkkkkkkkkkkkk.',
+      '................',
+      '................',
+    ],
+    well: [
+      '................',
+      '....rrrrrrrr....',
+      '...rrrrrrrrrr...',
+      '..rrrrRRRRrrrr..',
+      '..rrrR....Rrrr..',
+      '..rrR......Rrr..',
+      '..rrR......Rrr..',
+      '..rrrR....Rrrr..',
+      '..rrrrRRRRrrrr..',
+      '...rrrrrrrrrr...',
+      '....rrrrrrrr....',
+      '.....rrrrrr.....',
+      '.....rrrrrr.....',
+      '....rrrrrrrr....',
+      '...rrrrrrrrrr...',
+      '................',
+    ],
+    bin: [
+      '................',
+      '................',
+      '..kkkkkkkkkkkk..',
+      '.kwwwwwwwwwwwwk.',
+      '.kwWwwwwwwwwWwk.',
+      '.kkkkkkkkkkkkkk.',
+      '.kwwwwwwwwwwwwk.',
+      '.kwwwwGGGGwwwwk.',
+      '.kwwwwGggGwwwwk.',
+      '.kwWwwGGGGwwwwk.',
+      '.kwwwwwwwwwwwwk.',
+      '.kwwwwwwwwwwwwk.',
+      '.kwWwwwwwwwwWwk.',
+      '.kkkkkkkkkkkkkk.',
+      '................',
+      '................',
+    ],
+    sprinkler: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '.......k........',
+      '......kgk.......',
+      '.....kgggk......',
+      '....kkoggkk.....',
+      '....kooooo k....',
+      '...kkooooookk...',
+      '...kmoooooomk...',
+      '...kkkkkkkkkk...',
+      '................',
+      '................',
+      '................',
+    ],
+    scarecrow: [
+      '.....AAAAAA.....',
+      '....AAAAAAAA....',
+      '.....AssssA.....',
+      '......ssss......',
+      '......kkkk......',
+      '....cccccccc....',
+      '...cccccccccc...',
+      'ww-cccccccc-ww..',
+      '....cccccccc....',
+      '....cccccccc....',
+      '.....cccccc.....',
+      '......kkkk......',
+      '......kTk.......',
+      '......kTk.......',
+      '.....kTTTk......',
+      '....kkkkkkk.....',
+    ],
+    bed: [
+      '................',
+      '..kkkkkkkkkkkk..',
+      '.krrrrrrrrrrrrk.',
+      '.krrrrrrrrrrrrk.',
+      '.kwwwwwwwwwwwwk.',
+      '.kwwwwwwwwwwwwk.',
+      '.kqqqqqqqqqqqqk.',
+      '.kqqqqqqqqqqqqk.',
+      '.kqqqqqqqqqqqqk.',
+      '.kqqqqqqqqqqqqk.',
+      '.kqqqqqqqqqqqqk.',
+      '.kqqqqqqqqqqqqk.',
+      '.kTTTTTTTTTTTTk.',
+      '.kTTTTTTTTTTTTk.',
+      '.kkkkkkkkkkkkkk.',
+      '................',
+    ],
+    table: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '..kkkkkkkkkkkk..',
+      '..kwwwwwwwwwwk..',
+      '..kwWWwwwwWWwk..',
+      '..kkkkkkkkkkkk..',
+      '....k......k....',
+      '....kTk....kTk..',
+      '....kTk....kTk..',
+      '....kTk....kTk..',
+      '...kkkkk..kkkkk.',
+      '................',
+      '................',
+      '................',
+    ],
+    plant: [
+      '................',
+      '................',
+      '......gg........',
+      '...gg.gg..gg....',
+      '..gggggggggg....',
+      '..ggGggggGgg....',
+      '...gggggggg.....',
+      '....GggggG......',
+      '.....gggg.......',
+      '....kkkkkk......',
+      '....kttttk......',
+      '....kttttk......',
+      '....kkkkkk......',
+      '................',
+      '................',
+      '................',
+    ],
+  };
+  PROP_DEFS.weed = PROP_DEFS.weed.map(r => r);
+
+  // 树（16x28，季节换色）与冬季秃树
+  function treeSprite(leaf, leafDark, trunk) {
+    const pal = { '.': null, k: '#2a2018', L: leaf, l: leafDark, t: trunk, T: '#4a3520', W: '#ffffff44' };
+    const rows = [
+      '................',
+      '.....LLLLLL.....',
+      '...LLLLLLLLLL...',
+      '..LLlLLLLLLlLL..',
+      '.LLLLLLWWLLLLLL.',
+      '.LLlLLLLLLLLlLL.',
+      'LLLLLLlWWlLLLLLL',
+      'LLlLLLLLLLLLLlLL',
+      'LLLLLLlLLLLLLLLL',
+      '.LLlLLLLLLlLLL..',
+      '.LLLLLLlLLLLLL..',
+      '..LLLlLLLLLLl...',
+      '...LLLLLLLLLL...',
+      '....LLLLLLLL....',
+      '.....llllll.....',
+      '......ktk.......',
+      '......ktk.......',
+      '......kTk.......',
+      '.....kkTkk......',
+      '....kkTTTkk.....',
+      '....kTTTTTk.....',
+      '.....kkkkk......',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+    ];
+    return G.makeSprite(rows, pal);
+  }
+  const TREE_ROWS_WINTER = [
+    '................',
+    '................',
+    '...k........k...',
+    '....k......k....',
+    '.....k....k.....',
+    '..k...k..k...k..',
+    '...k..k..k..k...',
+    '....k.kk.kk.k...',
+    '.....kkkkkk.....',
+    '......k..k......',
+    '......kTTk......',
+    '.....kkTTkk.....',
+    '....kkTTTTkk....',
+    '....kTTTTTTk....',
+    '.....kkkkkk.....',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+  ];
+
+  const PROP_EXTRA_PAL = {
+    g: '#5f9e3e', G: '#4a7d2e', r: '#8a8f96', R: '#6e737a', W: '#c8ccd2', i: '#5a5f66',
+    w: '#d9b98a', Ww: '#c4a273', t: '#b08a5a', T: '#8a6a42', m: '#7a5a38', M: '#5f4529',
+    y: '#ffe98a', Y: '#d9a521', f: '#e86379', o: '#d97f2a', q: '#e8e4d8', A: '#e8c56a',
+    k: '#2a2018', c: '#c9764f', '-': null,
+  };
+  // 修正 weed 里不存在字符
+  PROP_DEFS.weed = [
+    '................',
+    '................',
+    '................',
+    '................',
+    '......g.........',
+    '..g...gg...g....',
+    '..gg..gg..gg....',
+    '..gg.ggg..gg.g..',
+    '...ggggg.ggg.gg.',
+    '...ggggggggggg..',
+    '..gggggggggggg..',
+    '..GgggggggGggg..',
+    '...GggggggGg....',
+    '....GGggGG......',
+    '................',
+    '................',
+  ];
+
+  /* ---------------- 觅食物 ---------------- */
+  function bushSprite(berry) {
+    const pal = { '.': null, k: '#2a2018', g: '#4f8a3d', G: '#3a6a2c', b: berry ? '#e0453a' : null, B: berry ? '#a83228' : null };
+    const rows = [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '.....kkkkk......',
+      '...kkgggggkk....',
+      '..kggbgggbggk...',
+      '..kggggggggggk..',
+      '.kggbgggbgggbgk.',
+      '.kggggggggggggk.',
+      '.kGggggggbgggGk.',
+      '..kGggggggggGk..',
+      '...kGGggggGGk...',
+      '....kkkkkkkk....',
+      '................',
+    ];
+    return G.makeSprite(rows, pal);
+  }
+  function mushroomSprite() {
+    return G.makeSprite([
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '.....kkkkk......',
+      '...kkrrrrrkk....',
+      '..krrWWrrrrrk...',
+      '..krrrrrWWrrk...',
+      '.krrrrrrrrrrrk..',
+      '.kkkkkkkkkkkkk..',
+      '....kqwwwwqk....',
+      '....kqwwwwqk....',
+      '....kqqqqqqk....',
+      '.....kkkkkk.....',
+      '................',
+    ], { '.': null, k: '#2a2018', r: '#c9453a', W: '#f0e8e0', q: '#f0e8d8', w: '#d8d0c0' });
+  }
+  function rootSprite() {
+    return G.makeSprite([
+      '................',
+      '................',
+      '................',
+      '................',
+      '......gg.g......',
+      '.......gg.......',
+      '....kkkggkkk....',
+      '...kWWWWWWWWk...',
+      '..kWWWWWWWWWWk..',
+      '..kWWWWWWWWWk...',
+      '..kkWWWWWWWkk...',
+      '...kkWWWWWkk....',
+      '....kkWWWkk.....',
+      '......kWk.......',
+      '.......k........',
+      '................',
+    ], { '.': null, k: '#5a6a7a', W: '#e8eef2', g: '#7a9a5a' });
+  }
+  function flowerSprite(col) {
+    return G.makeSprite([
+      '................',
+      '................',
+      '................',
+      '................',
+      '......fff.......',
+      '.....fWfff......',
+      '....ffWffff.....',
+      '.....ffff.f.....',
+      '......fFF.......',
+      '.......g........',
+      '......gg........',
+      '....g.gg........',
+      '.....ggg........',
+      '......Gg........',
+      '................',
+      '................',
+    ], { '.': null, f: col, W: '#ffffffcc', F: '#d9a521', g: '#5f9e3e', G: '#4a7d2e' });
+  }
+
+  /* ---------------- 鸡舍（生成式） ---------------- */
+  function coopSprite() {
+    const { c, x } = cv(34, 30);
+    // 屋顶
+    x.fillStyle = '#8c3d2e';
+    x.fillRect(0, 6, 34, 4);
+    x.fillStyle = '#b5533c';
+    for (let j = 0; j < 6; j++) {
+      const inset = Math.max(0, 4 - j);
+      x.fillRect(inset + 2, j, 30 - inset * 2, 1);
+    }
+    // 墙体
+    x.fillStyle = '#d9b98a'; x.fillRect(2, 10, 30, 18);
+    x.fillStyle = '#c4a273';
+    for (let j = 12; j < 28; j += 5) x.fillRect(2, j, 30, 1);
+    x.fillStyle = '#8a6a42'; x.fillRect(2, 28, 30, 2);
+    // 门洞 + 坡道
+    x.fillStyle = '#3a2c1a'; x.fillRect(13, 17, 8, 11);
+    x.fillStyle = '#5a4028'; x.fillRect(15, 19, 4, 2);
+    x.fillStyle = '#a5793c'; x.fillRect(12, 27, 10, 3);
+    x.fillStyle = '#7c5a2e';
+    for (let i = 12; i < 22; i += 3) x.fillRect(i, 27, 1, 3);
+    // 窗
+    x.fillStyle = '#2a2018'; x.fillRect(5, 13, 6, 6); x.fillRect(23, 13, 6, 6);
+    x.fillStyle = '#ffe98a'; x.fillRect(6, 14, 4, 4); x.fillRect(24, 14, 4, 4);
+    // 描边
+    x.strokeStyle = '#2a2018'; x.strokeRect(2.5, 10.5, 29, 18); x.strokeRect(1.5, 5.5, 31, 5);
+    return c;
+  }
+
+  /* ---------------- 建筑（生成式） ---------------- */
+  function buildingSprite(style, w, h) {
+    const W = w * TS, H = h * TS;
+    const roofH = Math.floor(H * 0.42);
+    const { c, x } = cv(W, H + roofH + 2);
+    // 墙
+    x.fillStyle = style.wall; x.fillRect(0, roofH, W, H);
+    x.fillStyle = style.wallLine;
+    for (let j = roofH + 7; j < roofH + H; j += 8) x.fillRect(2, j, W - 4, 1);
+    x.fillStyle = '#00000022';
+    x.fillRect(0, roofH, W, 2);
+    x.fillStyle = '#8a8a8a'; // 石基
+    for (let i = 0; i < W; i += 8) { x.fillStyle = i % 16 ? '#9a948a' : '#8a857c'; x.fillRect(i, roofH + H - 5, 7, 5); }
+    x.fillStyle = '#2a2018'; x.fillRect(0, roofH + H - 6, W, 1);
+    // 屋顶（梯形）
+    for (let j = 0; j < roofH; j++) {
+      const t = j / roofH;
+      const inset = Math.floor((1 - t) * (W * 0.18));
+      x.fillStyle = j < 2 ? style.roofDark : style.roof;
+      x.fillRect(inset - 2, j, W - inset * 2 + 4, 1);
+      if (j > roofH - 6) { x.fillStyle = style.roofDark; x.fillRect(inset - 4, j, W - inset * 2 + 8, 1); }
+    }
+    x.fillStyle = '#00000033';
+    x.fillRect(0, roofH - 1, W, 3);
+    // 脊线
+    x.fillStyle = style.roofDark; x.fillRect(W * 0.32, 0, W * 0.36, 2);
+    // 烟囱
+    if (style.chimney) { x.fillStyle = '#7a5a48'; x.fillRect(W - 14, 2, 7, 12); x.fillStyle = '#5a4034'; x.fillRect(W - 15, 1, 9, 3); }
+    // 门
+    const doorX = Math.floor(W * 0.28), doorY = roofH + H - 24;
+    x.fillStyle = '#2a2018'; x.fillRect(doorX - 1, doorY - 1, 16, 25);
+    x.fillStyle = style.door; x.fillRect(doorX, doorY, 14, 24);
+    x.fillStyle = '#00000033'; x.fillRect(doorX + 9, doorY, 5, 24);
+    x.fillStyle = '#e8c56a'; x.fillRect(doorX + 10, doorY + 12, 2, 2);
+    // 窗（两个）
+    const wins = [[Math.floor(W * 0.08), roofH + 10], [Math.floor(W * 0.74), roofH + 10]];
+    wins.forEach(([wx, wy]) => {
+      x.fillStyle = '#2a2018'; x.fillRect(wx - 1, wy - 1, 13, 13);
+      x.fillStyle = '#8a6a42'; x.fillRect(wx, wy, 11, 11);
+      x.fillStyle = '#bfe3ff'; x.fillRect(wx + 1, wy + 1, 9, 9);
+      x.fillStyle = '#8a6a42'; x.fillRect(wx + 5, wy, 1, 11); x.fillRect(wx, wy + 5, 11, 1);
+    });
+    // 门牌小图标
+    if (style.signIcon) {
+      const sx = Math.floor(W * 0.52), sy = roofH + 12;
+      x.fillStyle = '#5a4028'; x.fillRect(sx, sy, 12, 14);
+      x.fillStyle = '#e8d9b0'; x.fillRect(sx + 1, sy + 1, 10, 10);
+      x.fillStyle = style.signIcon;
+      disc(x, sx + 5, sy + 6, 3, style.signIcon);
+    }
+    return { cv: c, glow: wins.map(([wx, wy]) => ({ x: wx, y: wy, w: 11, h: 11 })), doorY: roofH };
+  }
+
+  /* ---------------- 作物阶段 ---------------- */
+  function cropStages(color) {
+    const stages = [];
+    // 0 播种
+    let { c, x } = cv(TS, TS);
+    x.fillStyle = '#3a2a18';
+    x.fillRect(5, 10, 2, 1); x.fillRect(9, 11, 2, 1); x.fillRect(7, 8, 2, 1);
+    x.fillStyle = '#6b4a2a'; x.fillRect(6, 9, 4, 2);
+    stages.push(c);
+    // 1 发芽
+    ({ c, x } = cv(TS, TS));
+    x.fillStyle = '#5f9e3e';
+    x.fillRect(7, 9, 2, 4);
+    x.fillStyle = '#71b04e';
+    x.fillRect(5, 8, 2, 2); x.fillRect(9, 8, 2, 2);
+    x.fillStyle = '#8fd45a'; x.fillRect(7, 7, 2, 2);
+    stages.push(c);
+    // 2 生长
+    ({ c, x } = cv(TS, TS));
+    x.fillStyle = '#4a7d2e';
+    x.fillRect(7, 5, 2, 8);
+    x.fillStyle = '#5f9e3e';
+    x.fillRect(3, 6, 4, 2); x.fillRect(9, 6, 4, 2);
+    x.fillRect(2, 9, 3, 2); x.fillRect(11, 9, 3, 2);
+    x.fillStyle = '#71b04e'; x.fillRect(6, 4, 4, 2);
+    stages.push(c);
+    // 3 成熟（带果实）
+    ({ c, x } = cv(TS, TS));
+    x.fillStyle = '#4a7d2e';
+    x.fillRect(7, 3, 2, 6);
+    x.fillStyle = '#5f9e3e';
+    x.fillRect(2, 4, 4, 2); x.fillRect(10, 4, 4, 2);
+    disc(x, 7, 9, 4, color);
+    x.fillStyle = '#00000044'; x.fillRect(4, 11, 8, 1);
+    x.fillStyle = '#ffffffaa'; x.fillRect(5, 7, 2, 2);
+    stages.push(c);
+    // 枯萎
+    ({ c, x } = cv(TS, TS));
+    x.fillStyle = '#8a7a5a';
+    x.fillRect(7, 8, 2, 5);
+    x.fillStyle = '#6a5a3a';
+    x.fillRect(4, 8, 3, 1); x.fillRect(9, 7, 3, 1);
+    x.fillRect(5, 6, 2, 1); x.fillRect(10, 5, 2, 1);
+    x.fillStyle = '#4a4030'; x.fillRect(6, 12, 4, 1);
+    stages.push(c);
+    return stages;
+  }
+
+  /* ---------------- 瓦片 ---------------- */
+  function tileGrass(season, variant) {
+    const A = G.SEASON_COLORS.grassA[season], B = G.SEASON_COLORS.grassB[season];
+    const dark = ['#4a7d2e', '#3f6d28', '#8a6a2e', '#a8b4ba'][season];
+    const { c, x } = cv(TS, TS);
+    x.fillStyle = variant ? A : B; x.fillRect(0, 0, TS, TS);
+    for (let i = 0; i < 7; i++) {
+      const rx = Math.floor(hash(i * 13 + variant, season * 7 + i) * TS);
+      const ry = Math.floor(hash(i * 7 + variant * 3, i * 17 + season) * TS);
+      x.fillStyle = dark; x.fillRect(rx, ry, 1, 2);
+    }
+    if (season === 0 && variant === 2) { x.fillStyle = '#f0d0e0'; x.fillRect(4, 5, 1, 1); x.fillRect(10, 10, 1, 1); x.fillStyle = '#ffe98a'; x.fillRect(11, 4, 1, 1); }
+    if (season === 2 && variant === 1) { x.fillStyle = '#d97f2a'; x.fillRect(5, 8, 1, 1); x.fillRect(12, 3, 1, 1); }
+    if (season === 3 && variant === 3) { x.fillStyle = '#ffffff'; x.fillRect(6, 6, 2, 1); x.fillRect(2, 12, 2, 1); }
+    return c;
+  }
+  function tilePath(season) {
+    const { c, x } = cv(TS, TS);
+    x.fillStyle = '#d8c08a'; x.fillRect(0, 0, TS, TS);
+    for (let i = 0; i < 6; i++) {
+      const rx = Math.floor(hash(i * 3, i * 11) * TS), ry = Math.floor(hash(i * 5, i * 2) * TS);
+      x.fillStyle = i % 2 ? '#c4a878' : '#e5d2a5'; x.fillRect(rx, ry, 2, 1);
+    }
+    x.fillStyle = '#b89a68'; x.fillRect(3, 7, 2, 2); x.fillRect(11, 12, 2, 1);
+    return c;
+  }
+  function tileWater(frame, season) {
+    const base = G.SEASON_COLORS.water[season];
+    const { c, x } = cv(TS, TS);
+    x.fillStyle = base; x.fillRect(0, 0, TS, TS);
+    x.fillStyle = '#00000022';
+    for (let i = 0; i < 4; i++) {
+      const rx = Math.floor(hash(i * 7, i) * TS), ry = Math.floor(hash(i, i * 5) * TS);
+      x.fillRect(rx, ry, 3, 1);
+    }
+    x.fillStyle = '#ffffff55';
+    const off = frame * 4;
+    x.fillRect((2 + off) % TS, 3, 4, 1); x.fillRect((9 + off) % TS, 9, 5, 1); x.fillRect((5 + off) % TS, 14, 3, 1);
+    return c;
+  }
+  function tileSoil(wet) {
+    const { c, x } = cv(TS, TS);
+    x.fillStyle = wet ? '#5a3f28' : '#8a6a42'; x.fillRect(0, 0, TS, TS);
+    x.fillStyle = wet ? '#4a3320' : '#77573a';
+    x.fillRect(0, 3, TS, 1); x.fillRect(0, 8, TS, 1); x.fillRect(0, 13, TS, 1);
+    x.fillStyle = wet ? '#6b4d30' : '#9a7a50';
+    x.fillRect(0, 1, TS, 1); x.fillRect(0, 6, TS, 1); x.fillRect(0, 11, TS, 1);
+    return c;
+  }
+  function tilePier() {
+    const { c, x } = cv(TS, TS);
+    x.fillStyle = '#b08a5a'; x.fillRect(0, 0, TS, TS);
+    x.fillStyle = '#8a6a42'; x.fillRect(0, 4, TS, 1); x.fillRect(0, 10, TS, 1);
+    x.fillStyle = '#9a7a50'; x.fillRect(0, 1, TS, 1); x.fillRect(0, 7, TS, 1); x.fillRect(0, 13, TS, 1);
+    x.fillStyle = '#2a2018'; x.fillRect(2, 0, 1, TS); x.fillRect(12, 0, 1, TS);
+    return c;
+  }
+  function tileFloor() {
+    const { c, x } = cv(TS, TS);
+    x.fillStyle = '#c9a878'; x.fillRect(0, 0, TS, TS);
+    x.fillStyle = '#b08a5a'; x.fillRect(0, 7, TS, 1);
+    x.fillStyle = '#d8bc90'; x.fillRect(0, 2, TS, 1); x.fillRect(0, 11, TS, 1);
+    x.fillStyle = '#a5793c'; x.fillRect(5, 0, 1, 7); x.fillRect(11, 8, 1, 8);
+    return c;
+  }
+  function tileWall() {
+    const { c, x } = cv(TS, TS);
+    x.fillStyle = '#e8dcc0'; x.fillRect(0, 0, TS, TS);
+    x.fillStyle = '#d0c0a0'; x.fillRect(0, 12, TS, 4);
+    x.fillStyle = '#bfa878'; x.fillRect(0, 12, TS, 1);
+    x.fillStyle = '#00000011'; x.fillRect(0, 5, TS, 1);
+    return c;
+  }
+  function tileRug() {
+    const { c, x } = cv(TS, TS);
+    x.fillStyle = '#b5533c'; x.fillRect(0, 0, TS, TS);
+    x.fillStyle = '#e0a04a'; x.fillRect(1, 1, TS - 2, TS - 2);
+    x.fillStyle = '#b5533c'; x.fillRect(3, 3, TS - 6, TS - 6);
+    x.fillStyle = '#e0a04a'; x.fillRect(6, 6, 4, 4);
+    return c;
+  }
+
+  /* ---------------- 物品图标 ---------------- */
+  function iconSeed(color) {
+    const { c, x } = cv(TS, TS);
+    x.fillStyle = '#d8c08a'; x.fillRect(3, 3, 10, 11);
+    x.fillStyle = '#b89a68'; x.fillRect(3, 3, 10, 2); x.fillRect(3, 12, 10, 2);
+    x.fillStyle = '#2a2018'; x.strokeStyle = '#2a2018'; x.strokeRect(3.5, 3.5, 9, 10);
+    x.fillStyle = color; x.fillRect(6, 7, 4, 4);
+    x.fillStyle = '#ffffff88'; x.fillRect(6, 7, 2, 2);
+    return c;
+  }
+  function iconCircle(color, dark, leafy) {
+    const { c, x } = cv(TS, TS);
+    disc(x, 8, 9, 5, color);
+    x.fillStyle = dark; x.fillRect(4, 12, 9, 1);
+    x.fillStyle = '#ffffffaa'; x.fillRect(6, 6, 2, 2);
+    if (leafy) { x.fillStyle = '#4a7d2e'; x.fillRect(7, 3, 2, 3); x.fillRect(5, 2, 3, 2); }
+    return c;
+  }
+  function iconFish(color, fin) {
+    const { c, x } = cv(TS, TS);
+    x.fillStyle = color;
+    x.fillRect(4, 8, 8, 3); x.fillRect(5, 7, 6, 5); x.fillRect(6, 6, 4, 7);
+    x.fillStyle = fin; x.fillRect(12, 7, 3, 5); x.fillRect(6, 4, 3, 2); x.fillRect(6, 12, 3, 2);
+    x.fillStyle = '#2a2018'; x.fillRect(5, 8, 1, 1);
+    x.fillStyle = '#ffffff99'; x.fillRect(6, 7, 3, 1);
+    return c;
+  }
+  function iconTool(kind) {
+    const { c, x } = cv(TS, TS);
+    const wood = '#a5793c', iron = '#b8bcc4', ironD = '#8a8f96';
+    if (kind === 'axe') {
+      x.fillStyle = wood; x.fillRect(7, 4, 2, 10);
+      x.fillStyle = iron; x.fillRect(5, 3, 6, 4); x.fillRect(4, 4, 2, 2);
+      x.fillStyle = ironD; x.fillRect(9, 4, 2, 3);
+    } else if (kind === 'pick') {
+      x.fillStyle = wood; x.fillRect(7, 4, 2, 10);
+      x.fillStyle = iron; x.fillRect(3, 3, 10, 2); x.fillRect(2, 4, 3, 2); x.fillRect(11, 4, 3, 2);
+    } else if (kind === 'hoe') {
+      x.fillStyle = wood; x.fillRect(7, 3, 2, 11);
+      x.fillStyle = iron; x.fillRect(4, 2, 5, 2); x.fillRect(4, 3, 2, 3);
+    } else if (kind === 'can') {
+      x.fillStyle = '#4f9ea0'; x.fillRect(4, 6, 8, 7); x.fillRect(2, 7, 2, 2);
+      x.fillStyle = '#3a7a7c'; x.fillRect(4, 12, 8, 1); x.fillRect(12, 5, 1, 4);
+      x.fillStyle = '#7cc4c6'; x.fillRect(5, 7, 3, 1);
+      x.fillStyle = '#4f9ea0'; x.fillRect(11, 10, 3, 1); x.fillRect(13, 9, 1, 2);
+    } else if (kind === 'rod') {
+      x.fillStyle = wood; x.fillRect(8, 4, 2, 10);
+      x.fillStyle = '#b8bcc4'; x.fillRect(9, 2, 1, 3);
+      x.fillStyle = '#e8e8e8'; x.fillRect(11, 5, 2, 2);
+      x.fillStyle = '#d9453a'; x.fillRect(11, 7, 1, 3);
+    }
+    return c;
+  }
+  function iconSimple(id) {
+    const { c, x } = cv(TS, TS);
+    if (id === 'wood') {
+      x.fillStyle = '#b08a5a'; x.fillRect(2, 5, 12, 6);
+      x.fillStyle = '#8a6a42'; x.fillRect(2, 5, 12, 1); x.fillRect(2, 10, 12, 1);
+      x.fillStyle = '#d9b98a'; x.fillRect(2, 6, 3, 4); x.fillStyle = '#a5793c'; disc(x, 3, 8, 1, '#c9a06a');
+    } else if (id === 'stone') {
+      disc(x, 8, 9, 5, '#9aa0a8'); disc(x, 6, 7, 2, '#c8ccd2'); x.fillStyle = '#6e737a'; x.fillRect(4, 12, 9, 1);
+    } else if (id === 'fiber') {
+      x.fillStyle = '#c9b45a';
+      for (let i = 0; i < 5; i++) { x.fillRect(4 + i, 4 + i, 1, 8 - (i > 2 ? 2 : 0)); x.fillRect(10 - i, 4 + i, 1, 8 - (i > 2 ? 2 : 0)); }
+      x.fillStyle = '#e0d080'; x.fillRect(7, 4, 2, 8);
+    } else if (id === 'berry') {
+      disc(x, 6, 9, 3, '#e0453a'); disc(x, 10, 8, 3, '#c93830'); disc(x, 8, 11, 2, '#e0453a');
+      x.fillStyle = '#4a7d2e'; x.fillRect(7, 4, 2, 3); x.fillStyle = '#ffffffaa'; x.fillRect(5, 8, 1, 1); x.fillRect(9, 7, 1, 1);
+    } else if (id === 'egg') {
+      disc(x, 8, 9, 4, '#f5f0e0'); x.fillStyle = '#d8d0b8'; x.fillRect(5, 12, 7, 1);
+      x.fillStyle = '#ffffff'; x.fillRect(6, 6, 2, 2);
+    } else if (id === 'flower') {
+      x.fillStyle = '#e88aa0'; disc(x, 8, 7, 3, '#e88aa0'); disc(x, 8, 7, 1, '#ffe98a');
+      x.fillStyle = '#5f9e3e'; x.fillRect(8, 10, 1, 4); x.fillRect(6, 11, 2, 1);
+    } else if (id === 'winterroot') {
+      x.fillStyle = '#e8eef2'; x.fillRect(7, 5, 3, 8); x.fillRect(5, 10, 2, 3); x.fillRect(10, 11, 2, 2);
+      x.fillStyle = '#7a9a5a'; x.fillRect(8, 3, 2, 2);
+    } else if (id === 'mushroom') {
+      disc(x, 8, 7, 4, '#c9453a'); x.fillStyle = '#f0e8e0'; x.fillRect(7, 8, 3, 6); x.fillStyle = '#ffffff'; x.fillRect(6, 5, 2, 2); x.fillRect(10, 6, 1, 1);
+    } else if (id === 'sprinkler') {
+      x.fillStyle = '#8a8f96'; x.fillRect(6, 9, 5, 4); x.fillStyle = '#b8bcc4'; x.fillRect(7, 5, 3, 4);
+      x.fillStyle = '#5fb8e8'; x.fillRect(4, 3, 2, 1); x.fillRect(11, 3, 2, 1); x.fillRect(8, 2, 1, 2);
+    } else if (id === 'scarecrow') {
+      x.fillStyle = '#a5793c'; x.fillRect(7, 8, 2, 7);
+      x.fillStyle = '#c9764f'; x.fillRect(4, 6, 8, 4); x.fillRect(2, 6, 2, 2); x.fillRect(12, 6, 2, 2);
+      x.fillStyle = '#e8c56a'; x.fillRect(5, 2, 6, 3); disc(x, 8, 7, 2, '#f2c896');
+    } else if (id === 'coop') {
+      x.fillStyle = '#b5533c'; x.fillRect(3, 4, 11, 3);
+      x.fillStyle = '#d9b98a'; x.fillRect(4, 7, 9, 7);
+      x.fillStyle = '#3a2c1a'; x.fillRect(7, 10, 3, 4);
+      x.fillStyle = '#2a2018'; x.strokeRect(3.5, 3.5, 10, 11);
+    } else if (id === 'bridge') {
+      x.fillStyle = '#b08a5a'; x.fillRect(2, 6, 12, 5);
+      x.fillStyle = '#8a6a42'; x.fillRect(2, 8, 12, 1);
+      x.fillStyle = '#5a4028'; x.fillRect(3, 4, 1, 2); x.fillRect(12, 4, 1, 2);
+    }
+    return c;
+  }
+
+  /* ---------------- 汇总 ---------------- */
+  G.buildSprites = function () {
+    const S = G.SPR = {};
+    // 季节瓦片
+    S.tilesBySeason = [];
+    for (let s = 0; s < 4; s++) {
+      S.tilesBySeason[s] = {
+        grass: [tileGrass(s, 0), tileGrass(s, 1), tileGrass(s, 2), tileGrass(s, 3)],
+        path: tilePath(s),
+        water: [tileWater(0, s), tileWater(1, s)],
+      };
+    }
+    S.tilled = tileSoil(false);
+    S.watered = tileSoil(true);
+    S.pier = tilePier();
+    S.bridge = tilePier();
+    S.floor = tileFloor();
+    S.wall = tileWall();
+    S.rug = tileRug();
+    // 树
+    S.trees = [
+      treeSprite('#71b04e', '#4a7d2e', '#b08a5a'),
+      treeSprite('#4f9438', '#3a6a2c', '#a5793c'),
+      treeSprite('#d08a3a', '#a8601f', '#9a7448'),
+      G.makeSprite(TREE_ROWS_WINTER, { '.': null, k: '#5a4a3a', t: '#a5793c', T: '#7c5a2e' }),
+    ];
+    // 道具
+    const weed = G.makeSprite(PROP_DEFS.weed, { '.': null, g: '#6aa84f', G: '#4a7d2e' });
+    const weedFall = G.makeSprite(PROP_DEFS.weed, { '.': null, g: '#b09a4a', G: '#8a7432' });
+    S.props = {
+      weed: [weed, weedFall],
+      rock: G.makeSprite(PROP_DEFS.rock, { '.': null, k: '#2a2018', r: '#8a8f96', W: '#c8ccd2', i: '#5a5f66' }),
+      stump: G.makeSprite(PROP_DEFS.stump, { '.': null, k: '#2a2018', t: '#b08a5a', T: '#8a6a42', r: '#c9a06a', W: '#d9b98a' }),
+      log: G.makeSprite(PROP_DEFS.log, { '.': null, k: '#2a2018', t: '#b08a5a', T: '#8a6a42', W: '#d9b98a' }),
+      sign: G.makeSprite(PROP_DEFS.sign, { '.': null, k: '#5a4028', w: '#d8c08a', W: '#8a6a42', T: '#a5793c' }),
+      lamp: G.makeSprite(PROP_DEFS.lamp, { '.': null, k: '#3a3a44', y: '#ffe98a', Y: '#fff' }),
+      fence: G.makeSprite(PROP_DEFS.fence, { '.': null, k: '#5a4028', w: '#b08a5a' }),
+      reed: G.makeSprite(PROP_DEFS.reed, { '.': null, g: '#6a9a4a', G: '#4a7d2e' }),
+      bench: G.makeSprite(PROP_DEFS.bench, { '.': null, k: '#5a4028', w: '#c9a06a' }),
+      flowerbed: G.makeSprite(PROP_DEFS.flowerbed, { '.': null, k: '#5a4028', f: '#e86379', m: '#7a5a38', M: '#5f4529' }),
+      well: G.makeSprite(PROP_DEFS.well, { '.': null, r: '#9aa0a8', R: '#6e737a' }),
+      bin: G.makeSprite(PROP_DEFS.bin, { '.': null, k: '#5a4028', w: '#c9a06a', W: '#a5793c', G: '#5a4028', g: '#8a6a42' }),
+      sprinkler: G.makeSprite(PROP_DEFS.sprinkler, { '.': null, k: '#3a3a44', g: '#b8bcc4', o: '#5fb8e8', m: '#6e737a' }),
+      scarecrow: G.makeSprite(PROP_DEFS.scarecrow, { '.': null, A: '#e8c56a', s: '#f2c896', c: '#c9764f', k: '#2a2018', T: '#a5793c', w: '#c9a06a', '-': null }),
+      bed: G.makeSprite(PROP_DEFS.bed, { '.': null, k: '#5a4028', r: '#d97f7a', w: '#f5f0e0', q: '#8fd0e8', T: '#a5793c' }),
+      table: G.makeSprite(PROP_DEFS.table, { '.': null, k: '#5a4028', w: '#c9a06a', W: '#a5793c', T: '#8a6a42' }),
+      plant: G.makeSprite(PROP_DEFS.plant, { '.': null, g: '#5f9e3e', G: '#4a7d2e', k: '#8c5a3a', t: '#c9764f' }),
+      bush: bushSprite(false), bushBerry: bushSprite(true),
+      mushroom: mushroomSprite(), winterroot: rootSprite(),
+      flower: flowerSprite('#e88aa0'), flowerSun: flowerSprite('#ffd964'),
+      coop: coopSprite(),
+    };
+    // 角色
+    S.player = charSet({
+      hair: '#6b4a2a', hat: '#e8c56a', hatDark: '#c9a545',
+      shirt: '#4f8a3d', shirtDark: '#3a6a2c', pants: '#6b5342',
+    });
+    S.npcs = {};
+    G.NPCS.forEach(n => {
+      S.npcs[n.id] = charSet({
+        hair: n.hair, hat: n.hair, hatDark: '#00000022',
+        shirt: n.shirt, shirtDark: n.shirt, pants: n.pants,
+      });
+    });
+    // 作物
+    S.crops = {};
+    Object.keys(G.CROPS).forEach(id => { S.crops[id] = cropStages(G.CROPS[id].color); });
+    // 建筑
+    S.buildings = {};
+    Object.keys(G.BUILDING_STYLE).forEach(t => {
+      const st = Object.assign({}, G.BUILDING_STYLE[t]);
+      st.chimney = (t === 'home');
+      st.signIcon = { shop: '#e86379', sawmill: '#a5793c', mayor: '#ffd964', cottage: '#e88aa0', home: null }[t] || null;
+      S.buildings[t] = buildingSprite(st, 4, 4);
+    });
+    // 图标
+    S.icons = {};
+    const ic = S.icons;
+    ic.axe = iconTool('axe'); ic.pick = iconTool('pick'); ic.hoe = iconTool('hoe');
+    ic.can = iconTool('can'); ic.rod = iconTool('rod');
+    ic.wood = iconSimple('wood'); ic.stone = iconSimple('stone'); ic.fiber = iconSimple('fiber');
+    ic.berry = iconSimple('berry'); ic.egg = iconSimple('egg'); ic.flower = iconSimple('flower');
+    ic.winterroot = iconSimple('winterroot'); ic.mushroom = iconSimple('mushroom');
+    ic.turnip = iconCircle('#f0e8f0', '#c9a5c9', true); ic.potato = iconCircle('#cfa763', '#9a7a42', false);
+    ic.tomato = iconCircle('#e0453a', '#a82820', true); ic.melon = iconCircle('#4f9e3d', '#2f7a28', true);
+    ic.pumpkin = iconCircle('#e08a2d', '#a8601f', true); ic.snowfl = iconCircle('#bcd9ff', '#8ab0d9', false);
+    ic.fish_sardine = iconFish('#c8d8e8', '#8aa0b8'); ic.fish_carp = iconFish('#8a9a5a', '#5a7a3a');
+    ic.fish_perch = iconFish('#5a9a8a', '#3a7a6a'); ic.fish_trout = iconFish('#d97f9a', '#a8506a');
+    ic.fish_legend = iconFish('#e8d05a', '#a8892a');
+    Object.keys(G.CROPS).forEach(id => { ic[G.CROPS[id].seed] = iconSeed(G.CROPS[id].color); });
+    ic.sprinkler = iconSimple('sprinkler'); ic.scarecrow = iconSimple('scarecrow');
+    ic.coop = iconSimple('coop'); ic.bridge = iconSimple('bridge');
+    // 觅食物与产出映射（bush→berry 等）
+    S.forageSprite = { berry: 'bushBerry', mushroom: 'mushroom', winterroot: 'winterroot', flower: 'flower' };
+  };
+
+  // 把图标等canvas画到目标ctx
+  G.drawSpr = function (x, spr, dx, dy, dw, dh) {
+    if (!spr) return;
+    x.drawImage(spr, Math.round(dx), Math.round(dy), dw || spr.width, dh || spr.height);
+  };
+})();
+
+;
+/* ============ 微光谷物语 · 核心引擎 ============ */
+window.G = window.G || {};
+(function () {
+  'use strict';
+  const TS = G.TS;
+  const SAVE_KEY = 'glimmerVale.save.v1';
+  const MIN_PER_SEC = 2;           // 1现实秒 = 2游戏分钟
+  const DAY_START = 360, DAY_END = 1560; // 6:00 → 次日2:00
+
+  /* ================= 状态 ================= */
+  G.state = null;
+  G.running = false;
+  G.paused = false;                // 面板/对话框/钓鱼时暂停
+  G.view = { w: 480, h: 270, scale: 2 };
+
+  function rng() { return Math.random(); }
+
+  G.newGame = function () {
+    const st = {
+      ver: 1,
+      map: 'farm', px: 6 * TS + 8, py: 7 * TS + 12, dir: 'down', frame: 0,
+      gold: 500, energy: 100, maxEnergy: 100,
+      day: 1, season: 0, year: 1, minute: DAY_START,
+      weather: 'sun', tomorrowWeather: 'sun',
+      inv: { turnip_seed: 8, potato_seed: 2, wood: 4, berry: 2 },
+      handTool: 'hoe', handItem: null,
+      farmTiles: {}, placed: [],
+      built: { bridge: false },
+      foragePicked: {},
+      quests: {}, questsDoneToday: [],
+      stats: { cleared: 0, planted: 0, harvested: 0, fish: 0, earned: 0, built: 0 },
+      talkedUnique: {}, npcGreeted: {},
+      dayLog: [], daySnap: null,
+      flags: { intro: 0, ending: 0 },
+    };
+    G.QUESTS.forEach(q => st.quests[q.id] = { done: false });
+    scatterFarm(st);
+    st.daySnap = snapDay(st);
+    G.state = st;
+    return st;
+  };
+
+  function scatterFarm(st) {
+    const F = G.FARM_SCATTER, f = F.field;
+    let tries = 0, placedN = { weed: 0, rock: 0, stump: 0, tree: 0 };
+    const target = { weed: F.weeds, rock: F.rocks, stump: F.stumps, tree: F.trees };
+    while (tries < 800 && (placedN.weed < target.weed || placedN.rock < target.rock ||
+      placedN.stump < target.stump || placedN.tree < target.tree)) {
+      tries++;
+      const x = f.x0 + Math.floor(rng() * (f.x1 - f.x0 + 1));
+      const y = f.y0 + Math.floor(rng() * (f.y1 - f.y0 + 1));
+      if (st.farmTiles[x + ',' + y]) continue;
+      if (F.avoid.some(r => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h)) continue;
+      const m = G.MAPS.farm;
+      if (m.terrain[y][x] !== '.' && m.terrain[y][x] !== ',') continue;
+      const roll = rng();
+      let t = 'weed';
+      if (roll > 0.88) t = 'rock'; else if (roll > 0.80) t = 'stump'; else if (roll > 0.70) t = 'tree';
+      if (placedN[t] >= target[t]) continue;
+      st.farmTiles[x + ',' + y] = { o: t, hp: t === 'rock' ? 2 : t === 'tree' ? 3 : 1 };
+      placedN[t]++;
+    }
+  }
+
+  function snapDay(st) {
+    const s = st.stats;
+    return { gold: st.gold, cleared: s.cleared, planted: s.planted, harvested: s.harvested, fish: s.fish, earned: s.earned, built: s.built, quests: G.QUESTS.filter(q => st.quests[q.id].done).length };
+  }
+
+  /* ================= 存档 ================= */
+  G.hasSave = () => !!localStorage.getItem(SAVE_KEY);
+  G.save = function (silent) {
+    if (!G.state) return;
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(G.state));
+      if (!silent) G.UI.toast('游戏已保存 💾', 'good');
+    } catch (e) { if (!silent) G.UI.toast('保存失败：' + e.message, 'bad'); }
+  };
+  G.load = function () {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+      const st = JSON.parse(raw);
+      if (!st || st.ver !== 1) return false;
+      G.state = st;
+      return true;
+    } catch (e) { return false; }
+  };
+  G.eraseSave = () => localStorage.removeItem(SAVE_KEY);
+
+  /* ================= 地图工具 ================= */
+  const SOLID_PROPS = { tree: 1, rock: 1, stump: 1, logpile: 1, sign: 1, lamp: 1, fence: 1, well: 1, bench: 1, bin: 1, bed: 1, table: 1 };
+  function propFootprint(p) { return { w: p.w || 1, h: p.h || 1 }; }
+  G.walkable = function (mapId, tx, ty) {
+    const m = G.MAPS[mapId];
+    if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) return false;
+    const t = m.terrain[ty][tx];
+    if (t === 'w') {
+      if (mapId === 'lake' && G.state && G.state.built.bridge &&
+        G.MAPS.lake.bridgeTiles.some(b => b.x === tx && b.y === ty)) return true;
+      return false;
+    }
+    if (t === 'W') return false;
+    if (m.buildings && m.buildings.some(b => tx >= b.x && tx < b.x + b.w && ty >= b.y && ty < b.y + b.h)) return false;
+    if (m.props && m.props.some(p => {
+      if (!(p.type in SOLID_PROPS)) return false;
+      const { w, h } = propFootprint(p);
+      return tx >= p.x && tx < p.x + w && ty >= p.y && ty < p.y + h;
+    })) return false;
+    if (mapId === 'farm' && G.state) {
+      const ft = G.state.farmTiles[tx + ',' + ty];
+      if (ft && (ft.o === 'rock' || ft.o === 'stump' || ft.o === 'tree')) return false;
+      if (G.state.placed.some(p => {
+        const def = G.BUILDS[p.type];
+        return tx >= p.x && tx < p.x + (def.w || 1) && ty >= p.y && ty < p.y + (def.h || 1);
+      })) return false;
+    }
+    return true;
+  };
+
+  /* ================= 时间与天气 ================= */
+  function fmtClock(min) {
+    const h24 = Math.floor(min / 60) % 24, mm = Math.floor(min % 60 / 10) * 10;
+    return (h24 < 10 ? '0' + h24 : h24) + ':' + (mm === 0 ? '00' : mm);
+  }
+  G.fmtClock = fmtClock;
+  G.seasonName = () => G.SEASON_NAMES[G.state.season];
+
+  function rollWeather() {
+    const s = G.state.season, r = rng();
+    if (s === 0) return r < .60 ? 'sun' : r < .82 ? 'cloud' : 'rain';
+    if (s === 1) return r < .55 ? 'sun' : r < .75 ? 'cloud' : r < .92 ? 'rain' : 'storm';
+    if (s === 2) return r < .45 ? 'sun' : r < .70 ? 'cloud' : 'rain';
+    return r < .55 ? 'snow' : r < .75 ? 'sun' : 'cloud';
+  }
+
+  /* ================= 新的一天 ================= */
+  G.newDay = function (penalty) {
+    const st = G.state;
+    st.day++;
+    if (st.day > 28) { st.day = 1; st.season = (st.season + 1) % 4; if (st.season === 0) st.year++; }
+    // 季节交替：不合季节的作物枯萎
+    Object.keys(st.farmTiles).forEach(k => {
+      const ft = st.farmTiles[k];
+      if (ft.crop && !ft.crop.dead && !G.CROPS[ft.crop.id].seasons.includes(st.season)) {
+        ft.crop.dead = 1; G.UI.dayLogLine('季节变换，[' + G.CROPS[ft.crop.id].name + '] 枯萎了…');
+      }
+    });
+    // 生长
+    Object.keys(st.farmTiles).forEach(k => {
+      const ft = st.farmTiles[k];
+      if (ft.crop && !ft.crop.dead) {
+        const c = G.CROPS[ft.crop.id];
+        if (c.seasons.includes(st.season) && ft.wet) {
+          ft.crop.prog = Math.min(c.days, ft.crop.prog + 1);
+          if (ft.crop.prog >= c.days) G.UI.dayLogLine(c.name + '成熟啦！');
+        }
+      }
+      ft.wet = 0;
+    });
+    st.weather = st.tomorrowWeather || rollWeather();
+    st.tomorrowWeather = rollWeather();
+    if (st.weather === 'rain' || st.weather === 'storm' || st.weather === 'snow') {
+      Object.keys(st.farmTiles).forEach(k => { if (st.farmTiles[k].tilled) st.farmTiles[k].wet = 1; });
+      G.UI.dayLogLine({ rain: '下雨了，作物都被浇好了。', storm: '暴雨倾盆…作物被浇透了。', snow: '下雪了，银装素裹。' }[st.weather]);
+    }
+    // 洒水器
+    st.placed.filter(p => p.type === 'sprinkler').forEach(p => {
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => {
+        const ft = st.farmTiles[(p.x + dx) + ',' + (p.y + dy)];
+        if (ft && ft.tilled) ft.wet = 1;
+      });
+    });
+    // 乌鸦
+    const crops = Object.keys(st.farmTiles).filter(k => st.farmTiles[k].crop && !st.farmTiles[k].crop.dead);
+    if (crops.length && rng() < 0.28) {
+      const unsafe = crops.filter(k => {
+        const [x, y] = k.split(',').map(Number);
+        return !st.placed.some(p => p.type === 'scarecrow' && Math.abs(p.x - x) <= 4 && Math.abs(p.y - y) <= 4);
+      });
+      if (unsafe.length) {
+        const k = unsafe[Math.floor(rng() * unsafe.length)];
+        st.farmTiles[k].crop.dead = 1;
+        G.UI.dayLogLine('一只乌鸦偷吃了作物…（建稻草人可防御）');
+      }
+    }
+    // 鸡舍
+    if (st.placed.some(p => p.type === 'coop')) { addItem('egg', 1); G.UI.dayLogLine('鸡舍产出了一枚鸡蛋 🥚'); }
+    // 杂草再生
+    let grew = 0;
+    for (let i = 0; i < 24 && grew < 4; i++) {
+      const x = 10 + Math.floor(rng() * 21), y = 10 + Math.floor(rng() * 11);
+      const k = x + ',' + y;
+      if (!st.farmTiles[k] && G.MAPS.farm.terrain[y][x] === '.' && rng() < 0.4) {
+        st.farmTiles[k] = { o: 'weed', hp: 1 }; grew++;
+      }
+    }
+    // 重置状态
+    st.minute = DAY_START;
+    st.energy = penalty ? Math.round(st.maxEnergy * 0.6) : st.maxEnergy;
+    st.dayLog = [];
+    st.questsDoneToday = [];
+    st.daySnap = snapDay(st);
+    checkQuests();
+    G.save(true);
+    G.UI.refreshHUD();
+  };
+
+  function sleepNow(penalty) {
+    G.UI.showSettle(() => { G.newDay(penalty); });
+  }
+
+  /* ================= 背包 ================= */
+  function addItem(id, n) {
+    const st = G.state;
+    st.inv[id] = (st.inv[id] || 0) + n;
+    if (st.inv[id] <= 0) delete st.inv[id];
+    G.UI.refreshHotbar();
+  }
+  G.addItem = addItem;
+  function hasItem(id, n) { return (G.state.inv[id] || 0) >= (n || 1); }
+  function takeItem(id, n) { addItem(id, -(n || 1)); }
+
+  function sellItem(id, n) {
+    const st = G.state, it = G.ITEMS[id];
+    n = Math.min(n, st.inv[id] || 0);
+    if (n <= 0) return;
+    const got = it.sell * n;
+    takeItem(id, n);
+    st.gold += got;
+    st.stats.earned += got;
+    G.UI.dayLogLine('售出 ' + it.name + ' ×' + n + '（+' + got + '金）');
+    G.UI.toast(it.name + ' ×' + n + ' 卖出 +' + got + '金', 'good');
+    G.sfx('coin');
+    checkQuests(); G.UI.refreshHUD(); G.UI.refreshHotbar();
+  }
+  G.sellItem = sellItem;
+
+  function useEnergy(n) {
+    const st = G.state;
+    if (st.energy < n) { G.UI.toast('太累了，先吃点东西或回家睡觉吧…', 'bad'); G.sfx('error'); return false; }
+    st.energy -= n;
+    G.UI.refreshHUD();
+    return true;
+  }
+  G.useEnergy = useEnergy;
+  G.gainEnergy = (n) => { G.state.energy = Math.min(G.state.maxEnergy, G.state.energy + n); G.UI.refreshHUD(); };
+
+  /* ================= 任务 ================= */
+  function questProgress(q) {
+    const st = G.state;
+    if (q.type === 'deliver') return Math.min(q.goal, st.inv[q.item] || 0);
+    if (q.stat === 'talked') return Math.min(q.goal, Object.keys(st.talkedUnique).length);
+    return Math.min(q.goal, st.stats[q.stat] || 0);
+  }
+  G.questProgress = questProgress;
+  G.recovery = function () {
+    const st = G.state;
+    const done = G.QUESTS.filter(q => st.quests[q.id].done).length;
+    return Math.min(100, Math.round(done / G.QUESTS.length * 70 + Math.min(4, st.stats.built) * 5 + (st.built.bridge ? 10 : 0)));
+  };
+
+  function grantReward(q) {
+    const st = G.state, r = q.reward || {};
+    let txt = '';
+    if (q.type === 'deliver') { takeItem(q.item, q.goal); txt += '已交付 ' + G.ITEMS[q.item].name + '×' + q.goal + ' '; }
+    if (r.gold) { st.gold += r.gold; txt += '+' + r.gold + '金 '; }
+    if (r.items) Object.keys(r.items).forEach(id => { if (r.items[id] > 0) { addItem(id, r.items[id]); txt += G.ITEMS[id].name + '×' + r.items[id] + ' '; } });
+    st.questsDoneToday.push(q.name);
+    G.UI.dayLogLine('完成任务「' + q.name + '」！');
+    G.UI.toast('✅ 任务完成：' + q.name + '　奖励 ' + txt, 'good');
+    G.sfx('coin');
+    if (G.QUESTS.every(x => st.quests[x.id].done) && !st.flags.ending) {
+      st.flags.ending = 1;
+      setTimeout(() => G.UI.showEnding(), 1200);
+    }
+  }
+
+  function checkQuests() {
+    const st = G.state;
+    G.QUESTS.forEach(q => {
+      const qs = st.quests[q.id];
+      if (qs.done) return;
+      if (questProgress(q) >= q.goal) { qs.done = true; grantReward(q); }
+    });
+    G.UI.refreshHUD();
+  }
+  G.checkQuests = checkQuests;
+
+  /* ================= 玩家与NPC ================= */
+  const input = G.input = { up: 0, down: 0, left: 0, right: 0, jx: 0, jy: 0 };
+  let animT = 0;
+
+  function tryMove(dx, dy, dt) {
+    const st = G.state, sp = 62 * dt;
+    const hitbox = (x, y) => {
+      const pts = [[x - 5, y - 2], [x + 5, y - 2], [x - 5, y + 4], [x + 5, y + 4]];
+      return pts.some(([ax, ay]) => !G.walkable(st.map, Math.floor(ax / TS), Math.floor(ay / TS)));
+    };
+    let moved = false;
+    if (dx) {
+      const nx = st.px + dx * sp;
+      if (!hitbox(nx, st.py)) { st.px = nx; moved = true; }
+    }
+    if (dy) {
+      const ny = st.py + dy * sp;
+      if (!hitbox(st.px, ny)) { st.py = ny; moved = true; }
+    }
+    return moved;
+  }
+
+  function updatePlayer(dt) {
+    const st = G.state;
+    let dx = (input.right - input.left) + input.jx, dy = (input.down - input.up) + input.jy;
+    const mag = Math.hypot(dx, dy);
+    if (mag > 1) { dx /= mag; dy /= mag; }
+    if (Math.abs(dx) > Math.abs(dy) * 1.2 && Math.abs(dx) > 0.15) st.dir = dx > 0 ? 'right' : 'left';
+    else if (Math.abs(dy) > 0.15) st.dir = dy > 0 ? 'down' : 'up';
+    if (mag > 0.15) {
+      if (tryMove(dx, dy, dt)) {
+        animT += dt * 8;
+        const f = Math.floor(animT) % 4;
+        st.frame = f === 1 ? 1 : f === 3 ? 2 : 0;
+        checkExit();
+      } else st.frame = 0;
+    } else { st.frame = 0; animT = 0; }
+  }
+
+  function checkExit() {
+    const st = G.state, m = G.MAPS[st.map];
+    const tx = Math.floor(st.px / TS), ty = Math.floor(st.py / TS);
+    for (const e of m.exits || []) {
+      if (tx >= e.x && tx < e.x + e.w && ty >= e.y && ty < e.y + e.h) {
+        G.UI.transition(() => { st.map = e.to; st.px = e.tx * TS + 8; st.py = e.ty * TS + 12; G.save(true); G.UI.refreshHUD(); });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  G.npcSlot = function (npc, minute) {
+    for (const s of npc.slots) if (minute >= s.f && minute < s.t) return s;
+    return npc.slots[npc.slots.length - 1];
+  };
+  G.npcLocText = function (npc) {
+    const s = G.npcSlot(npc, G.state.minute);
+    if (!s.map) return '休息中';
+    const m = G.MAPS[s.map];
+    return (m.indoor ? '' : '') + m.name + ' (' + s.x + ',' + s.y + ')';
+  };
+
+  // NPC实时位置缓存
+  const npcPos = {};
+  function updateNPCs(dt) {
+    const st = G.state;
+    G.NPCS.forEach(n => {
+      const s = G.npcSlot(n, st.minute);
+      if (!s.map) return;
+      let p = npcPos[n.id];
+      if (!p || p.map !== s.map) { p = npcPos[n.id] = { map: s.map, x: s.x * TS + 8, y: s.y * TS + 12, dir: 'down', frame: 0, t: 0 }; }
+      const tx = s.x * TS + 8, ty = s.y * TS + 12;
+      const dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy);
+      if (d > 2) {
+        const sp = Math.min(40 * dt, d);
+        p.x += dx / d * sp; p.y += dy / d * sp;
+        p.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+        p.t += dt * 8; p.frame = Math.floor(p.t) % 2 ? (Math.floor(p.t / 2) % 2 ? 1 : 2) : 0;
+      } else { p.dir = 'down'; p.frame = 0; }
+    });
+  }
+  G.npcPos = npcPos;
+
+  /* ================= 面向瓦片与交互 ================= */
+  G.facingTile = function () {
+    const st = G.state;
+    const fx = st.dir === 'left' ? -1 : st.dir === 'right' ? 1 : 0;
+    const fy = st.dir === 'up' ? -1 : st.dir === 'down' ? 1 : 0;
+    return {
+      x: Math.floor((st.px + fx * TS * 0.9) / TS),
+      y: Math.floor((st.py + fy * TS * 0.9 + 2) / TS),
+    };
+  };
+  G.facingNPC = function () {
+    const st = G.state, t = G.facingTile();
+    for (const n of G.NPCS) {
+      const p = npcPos[n.id];
+      if (!p || p.map !== st.map) continue;
+      const nx = Math.floor(p.x / TS), ny = Math.floor(p.y / TS);
+      if (nx === t.x && ny === t.y) return n;
+      // 也允许玩家与NPC重叠时交互
+      if (nx === Math.floor(st.px / TS) && ny === Math.floor(st.py / TS)) return n;
+    }
+    return null;
+  };
+
+  function talk(npc) {
+    const st = G.state;
+    st.talkedUnique[npc.id] = 1;
+    const s = G.npcSlot(npc, st.minute);
+    const greeted = st.npcGreeted[npc.id] === st.day + st.year * 1000;
+    let text;
+    if (s.greet && !greeted) { text = s.greet; st.npcGreeted[npc.id] = st.day + st.year * 1000; }
+    else text = npc.lines[Math.floor(rng() * npc.lines.length)];
+    // 任务相关提示
+    const hints = {
+      greg: ['清理农场杂物、种下作物，任务都在日志里 (J)。', '恢复小镇的每一步都算数！'],
+      martha: ['店里营业时间 8:00-20:00 哦。', '下雨天不用浇水~'],
+      zhou: ['带着木头来找我，能建不少好东西。', '栈桥修好后能去深水区钓鱼。'],
+      hai: ['鱼上钩时浮标会闪，手要快！', '深水区的鱼更值钱。'],
+      lily: ['野花…可以送给我吗？嘿嘿。', '听说月圆夜有金色的鱼！'],
+    };
+    if (rng() < 0.35 && hints[npc.id]) text = hints[npc.id][Math.floor(rng() * hints[npc.id].length)];
+    G.UI.dialog(npc.name, text);
+    G.sfx('talk');
+    checkQuests();
+  }
+
+  function facingIsLogpile(t) {
+    return (G.MAPS.forest.props || []).some(p => p.type === 'logpile' && p.x === t.x && p.y === t.y);
+  }
+
+  function interactBuilding(b) {
+    const st = G.state;
+    if (b.type === 'home') { G.UI.transition(() => { st.map = 'home'; st.px = 5 * TS + 8; st.py = 6 * TS + 12; }); return true; }
+    if (b.type === 'shop') {
+      if (st.minute >= 480 && st.minute < 1200) G.UI.openPanel('shop');
+      else G.UI.dialog('玛莎杂货店', '打烊了～营业时间是 8:00-20:00。');
+      return true;
+    }
+    if (b.type === 'sawmill') { G.UI.openPanel('build'); return true; }
+    if (b.type === 'mayor') { G.UI.dialog('镇长家', '门锁着。格雷戈里一般上午在广场。'); return true; }
+    if (b.type === 'cottage') { G.UI.dialog('民居', '主人出远门了，门口的风信子开得正好。'); return true; }
+    return false;
+  }
+
+  /* ================= 工具行为 ================= */
+  function farmTileAt(t) {
+    const st = G.state;
+    if (st.map !== 'farm') return null;
+    return st.farmTiles[t.x + ',' + t.y] || null;
+  }
+
+  function clearObject(t, ft) {
+    const st = G.state, k = t.x + ',' + t.y;
+    delete st.farmTiles[k];
+    st.stats.cleared++;
+    checkQuests();
+  }
+
+  function doTool() {
+    const st = G.state;
+    if (G.placing) { cancelPlace(); return; }
+    const t = G.facingTile();
+    const m = G.MAPS[st.map];
+    if (t.x < 0 || t.y < 0 || t.x >= m.w || t.y >= m.h) return;
+    const terr = m.terrain[t.y][t.x];
+    const ft = farmTileAt(t);
+    const tool = st.handTool;
+
+    if (tool === 'hoe') {
+      if (ft && ft.crop && ft.crop.dead) { if (!useEnergy(1)) return; delete st.farmTiles[t.x + ',' + t.y]; G.sfx('dig'); particles(t.x, t.y, '#8a7a5a'); return; }
+      if (ft && ft.o === 'weed') { if (!useEnergy(2)) return; clearObject(t, ft); if (rng() < 0.5) { addItem('fiber', 1); G.UI.toast('+1 纤维', ''); } G.sfx('dig'); particles(t.x, t.y, '#6aa84f'); return; }
+      if (!ft && st.map === 'farm' && (terr === '.' || terr === ',')) { if (!useEnergy(2)) return; st.farmTiles[t.x + ',' + t.y] = { tilled: 1 }; G.sfx('dig'); particles(t.x, t.y, '#8a6a42'); return; }
+      G.UI.toast('这里不能锄地（农场空地才可以）', ''); G.sfx('error'); return;
+    }
+    if (tool === 'axe') {
+      if (ft && ft.o === 'tree') { if (!useEnergy(3)) return; ft.hp--; G.sfx('chop'); particles(t.x, t.y, '#71b04e'); if (ft.hp <= 0) { clearObject(t, ft); addItem('wood', 3); G.UI.toast('+3 木头', 'good'); } else G.UI.toast('树：还差 ' + ft.hp + ' 斧', ''); return; }
+      if (ft && ft.o === 'stump') { if (!useEnergy(2)) return; clearObject(t, ft); addItem('wood', 1); G.sfx('chop'); particles(t.x, t.y, '#b08a5a'); G.UI.toast('+1 木头', 'good'); return; }
+      if (st.map === 'forest' && facingIsLogpile(t)) {
+        if (st.foragePicked['logpile'] === st.day + st.year * 1000) { G.UI.toast('木堆明天才会补上', ''); return; }
+        if (!useEnergy(3)) return;
+        st.foragePicked['logpile'] = st.day + st.year * 1000;
+        addItem('wood', 3); G.sfx('chop'); particles(t.x, t.y, '#b08a5a');
+        G.UI.toast('+3 木头', 'good'); checkQuests(); return;
+      }
+      G.UI.toast('（斧头：砍树/树桩/木堆）', ''); return;
+    }
+    if (tool === 'pick') {
+      if (ft && ft.o === 'rock') { if (!useEnergy(3)) return; ft.hp--; G.sfx('chop'); particles(t.x, t.y, '#c8ccd2'); if (ft.hp <= 0) { clearObject(t, ft); addItem('stone', 2); G.UI.toast('+2 石头', 'good'); } else G.UI.toast('石头：还差 ' + ft.hp + ' 镐', ''); return; }
+      if (ft && !ft.o) { delete st.farmTiles[t.x + ',' + t.y]; G.sfx('dig'); particles(t.x, t.y, '#8a6a42'); return; } // 铲掉耕地
+      G.UI.toast('（十字镐：敲碎石块）', ''); return;
+    }
+    if (tool === 'can') {
+      if (ft && ft.tilled) {
+        if (ft.wet) { G.UI.toast('这块地已经湿润了', ''); return; }
+        if (!useEnergy(1)) return;
+        ft.wet = 1; G.sfx('water'); particles(t.x, t.y, '#5fb8e8');
+        return;
+      }
+      G.UI.toast('（水壶：浇灌开垦过的土地）', ''); return;
+    }
+    if (tool === 'rod') {
+      if (terr === 'w') { startFishing(t); return; }
+      G.UI.toast('面向水面才能抛竿', ''); G.sfx('error'); return;
+    }
+  }
+  G.doTool = doTool;
+
+  /* ================= 互动（A键） ================= */
+  function doInteract() {
+    const st = G.state;
+    if (G.placing) { tryPlace(); return; }
+    const t = G.facingTile();
+    const m = G.MAPS[st.map];
+    if (t.x < 0 || t.y < 0 || t.x >= m.w || t.y >= m.h) return;
+
+    // NPC优先
+    const npc = G.facingNPC();
+    if (npc) { talk(npc); return; }
+
+    // 建筑
+    const b = (m.buildings || []).find(b => t.x >= b.x && t.x < b.x + b.w && t.y >= b.y && t.y < b.y + b.h);
+    if (b) {
+      if (b.door && t.x === b.door.x && t.y === b.door.y) { interactBuilding(b); return; }
+      if (interactBuilding(b)) return;
+    }
+
+    // 静态道具
+    const prop = (m.props || []).find(p => {
+      if (p.type === 'rug') return false;
+      const pw = p.w || 1, ph = p.h || 1;
+      return t.x >= p.x && t.x < p.x + pw && t.y >= p.y && t.y < p.y + ph;
+    });
+    if (prop) {
+      if (prop.type === 'bed') { G.UI.confirmSleep(); return; }
+      if (prop.type === 'sign') { G.UI.dialog('告示牌', prop.text); return; }
+      if (prop.type === 'bin') { G.UI.openPanel('sell-bin'); return; }
+      if (prop.type === 'logpile') { G.UI.toast('用斧头砍木堆获得木头', ''); return; }
+    }
+
+    // 森林觅食
+    if (st.map === 'forest') {
+      const spot = (G.MAPS.forest.forageSpots || []).find(s => s.x === t.x && s.y === t.y);
+      if (spot) {
+        const key = 'f' + spot.x + ',' + spot.y;
+        const picked = st.foragePicked[key] === st.day + st.year * 1000;
+        const type = forageType(spot);
+        if (picked) { G.UI.toast('明天才会再长出来…', ''); return; }
+        addItem(type, 1);
+        st.foragePicked[key] = st.day + st.year * 1000;
+        G.sfx('pick'); particles(t.x, t.y, '#8fd45a');
+        G.UI.toast('+1 ' + G.ITEMS[type].name, 'good');
+        return;
+      }
+    }
+
+    // 农场作物
+    const ft = farmTileAt(t);
+    if (ft && ft.crop && !ft.crop.dead && ft.crop.prog >= G.CROPS[ft.crop.id].days) {
+      const c = G.CROPS[ft.crop.id];
+      if (!useEnergy(1)) return;
+      const bonus = rng() < 0.12 ? 2 : 1;
+      addItem(c.seed.replace('_seed', ''), bonus);
+      delete st.farmTiles[t.x + ',' + t.y];
+      st.stats.harvested += bonus;
+      G.sfx('pick'); particles(t.x, t.y, c.color);
+      G.UI.toast('收获 ' + c.name + ' ×' + bonus + '！', 'good');
+      checkQuests();
+      return;
+    }
+
+    // 手持物品
+    if (st.handItem) {
+      const it = G.ITEMS[st.handItem];
+      if (it.cat === 'seed') { plantSeed(t, ft); return; }
+      if (G.EATABLE.includes(st.handItem)) {
+        const e = G.EAT_ENERGY[st.handItem];
+        takeItem(st.handItem, 1);
+        G.gainEnergy(e);
+        G.sfx('eat');
+        G.UI.toast('吃了 ' + it.name + '，体力 +' + e, 'good');
+        return;
+      }
+    }
+    G.UI.toast('（没有可互动的目标）', '');
+  }
+  G.doInteract = doInteract;
+
+  function plantSeed(t, ft) {
+    const st = G.state;
+    const cid = G.ITEMS[st.handItem].cropId;
+    const c = G.CROPS[cid];
+    if (!ft || !ft.tilled || ft.crop) { G.UI.toast('需要先锄好一块空地', ''); G.sfx('error'); return; }
+    if (!c.seasons.includes(st.season)) { G.UI.toast(c.name + '不适合在' + G.SEASON_NAMES[st.season] + '天种植', 'bad'); G.sfx('error'); return; }
+    if (!useEnergy(1)) return;
+    takeItem(st.handItem, 1);
+    ft.crop = { id: cid, prog: 0 };
+    st.stats.planted++;
+    G.sfx('plant'); particles(t.x, t.y, c.color);
+    checkQuests();
+  }
+
+  function forageType(spot) {
+    const idx = G.MAPS.forest.forageSpots.indexOf(spot);
+    if (idx % 2 === 0) {
+      const s = G.state.season;
+      return s === 2 ? 'mushroom' : s === 3 ? 'winterroot' : 'berry';
+    }
+    return 'flower';
+  }
+  function isForageAt(x, y) {
+    if (G.state.map !== 'forest') return null;
+    const spot = G.MAPS.forest.forageSpots.find(s => s.x === x && s.y === y);
+    if (!spot) return null;
+    return forageType(spot);
+  }
+
+  /* ================= 建造 ================= */
+  G.placing = null;
+  G.startPlace = function (type) {
+    G.placing = { type };
+    G.UI.closePanel();
+    G.UI.toast('移动选择位置，按 互动 放置 / 工具 取消', '');
+  };
+  function cancelPlace() { G.placing = null; G.UI.toast('已取消建造', ''); }
+
+  G.placeValid = function (type, tx, ty) {
+    const st = G.state, m = G.MAPS.farm;
+    if (st.map !== 'farm') return false;
+    const def = G.BUILDS[type];
+    if (type === 'bridge') {
+      if (st.built.bridge) return false;
+      return G.MAPS.lake.bridgeTiles.some(b => b.x === tx && b.y === ty);
+    }
+    const w = def.w || 1, h = def.h || 1;
+    for (let y = ty; y < ty + h; y++) for (let x = tx; x < tx + w; x++) {
+      if (x >= m.w || y >= m.h) return false;
+      const terr = m.terrain[y][x];
+      if (terr !== '.' && terr !== ',') return false;
+      if (st.farmTiles[x + ',' + y]) return false;
+      if (m.buildings.some(b => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h)) return false;
+      if (m.props.some(p => p.type !== 'rug' && x >= p.x && x < p.x + (p.w || 1) && y >= p.y && y < p.y + (p.h || 1))) return false;
+    }
+    return true;
+  };
+
+  function tryPlace() {
+    const st = G.state;
+    if (!G.placing) return;
+    const type = G.placing.type, def = G.BUILDS[type];
+    const t = G.facingTile();
+    if (!G.placeValid(type, t.x, t.y)) { G.UI.toast('这里不能放置', 'bad'); G.sfx('error'); return; }
+    const cost = def.cost;
+    if (st.gold < cost.gold) { G.UI.toast('金币不足（需要 ' + cost.gold + '金）', 'bad'); G.sfx('error'); return; }
+    if (cost.wood && !hasItem('wood', cost.wood)) { G.UI.toast('木头不足（需要 ' + cost.wood + '个）', 'bad'); G.sfx('error'); return; }
+    st.gold -= cost.gold;
+    if (cost.wood) takeItem('wood', cost.wood);
+    if (type === 'bridge') {
+      st.built.bridge = true;
+      G.UI.toast('🌉 栈桥修好了！深水区开放！', 'good');
+      G.UI.dayLogLine('修复了湖边栈桥');
+    } else {
+      st.placed.push({ type, x: t.x, y: t.y });
+      G.UI.toast('建造了' + def.name + '！', 'good');
+      G.UI.dayLogLine('建造了' + def.name);
+    }
+    st.stats.built++;
+    G.sfx('build');
+    G.placing = null;
+    checkQuests(); G.UI.refreshHUD();
+  }
+
+  /* ================= 钓鱼 ================= */
+  const fish = { active: false, phase: '', timer: 0, fishY: 50, barY: 120, barV: 0, prog: 0, deep: false, t: 0 };
+  G.fishing = fish;
+
+  function startFishing(t) {
+    const st = G.state;
+    if (!useEnergy(6)) return;
+    fish.active = true;
+    fish.phase = 'wait';
+    fish.timer = 1 + rng() * 2.5;
+    fish.deep = st.map === 'lake' && t.x >= 22 && t.y >= 16;
+    fish.prog = 0.35;
+    fish.barY = Math.max(6, Math.min(236 - 42, fish.fishY - 21));
+    fish.barV = 0; fish.t = 0;
+    fish.fishY = 60 + rng() * 100;
+    fish.barY = Math.max(6, Math.min(236 - 42, fish.fishY - 21));
+    G.sfx('cast');
+    G.UI.showFishing(true);
+    G.UI.fishMsg(fish.deep ? '深水区…有大家伙的动静！' : '抛竿…等待鱼儿上钩');
+  }
+
+  function fishPress() {
+    if (!fish.active) return;
+    if (fish.phase === 'wait') {
+      if (fish.bite) { fish.phase = 'reel'; fish.timer = 7; G.sfx('biteset'); G.UI.fishMsg('咬钩了！保持鱼在框内！'); }
+      else G.UI.fishMsg('还没动静…耐心等浮标下沉');
+    }
+  }
+  G.fishPress = fishPress;
+  G.fishHold = (on) => { fish.holding = on; };
+
+  function updateFishing(dt) {
+    if (!fish.active) return;
+    fish.t += dt;
+    if (fish.phase === 'wait') {
+      if (!fish.bite) {
+        fish.timer -= dt;
+        if (fish.timer <= 0) {
+          fish.bite = true; fish.timer = 0.8;
+          G.sfx('bite'); G.UI.fishMsg('❗ 快按 互动/空格 提竿！');
+        }
+      } else {
+        fish.timer -= dt;
+        if (fish.timer <= 0) endFishing(false, '鱼跑掉了…（要在浮标闪烁时提竿）');
+      }
+      if (fish.t > 10) endFishing(false, '等太久了…换个位置试试');
+      return;
+    }
+    if (fish.phase === 'reel') {
+      fish.timer -= dt;
+      // 鱼
+      if (rng() < dt * 1.6) fish.fishVY = (rng() - 0.5) * 160;
+      if (rng() < dt * 0.35) fish.fishVY = (rng() < 0.5 ? -1 : 1) * (90 + rng() * 90);
+      fish.fishY += (fish.fishVY || 0) * dt;
+      fish.fishY = Math.max(14, Math.min(210, fish.fishY));
+      // 鱼筐
+      fish.barV += (fish.holding ? -900 : 900) * dt;
+      fish.barV = Math.max(-260, Math.min(260, fish.barV));
+      fish.barY += fish.barV * dt;
+      const H = 42;
+      if (fish.barY < 6) { fish.barY = 6; fish.barV = 0; }
+      if (fish.barY > 236 - H) { fish.barY = 236 - H; fish.barV = 0; }
+      const inBox = fish.fishY > fish.barY + 2 && fish.fishY < fish.barY + H - 2;
+      fish.prog += (inBox ? 0.34 : -0.22) * dt;
+      if (fish.prog >= 1) {
+        const pool = G.FISH_TABLE.filter(f => fish.deep ? f.w[1] > 0 && f.min <= 1 : f.w[0] > 0 && f.min === 0);
+        let total = 0; const ws = pool.map(f => { const w = fish.deep ? f.w[1] : f.w[0]; total += w; return w; });
+        let r = rng() * total, pick = pool[0];
+        for (let i = 0; i < pool.length; i++) { r -= ws[i]; if (r <= 0) { pick = pool[i]; break; } }
+        addItem(pick.id, 1);
+        G.state.stats.fish++;
+        G.sfx('catch');
+        endFishing(true, '钓到了【' + G.ITEMS[pick.id].name + '】！', pick.id);
+        checkQuests();
+      } else if (fish.prog <= 0 || fish.timer <= 0) {
+        endFishing(false, '鱼挣脱了…再试一次！');
+      }
+    }
+  }
+  function endFishing(ok, msg, itemId) {
+    fish.active = false; fish.bite = false;
+    G.UI.showFishing(false);
+    G.UI.toast((ok ? '🎣 ' : '') + msg, ok ? 'good' : 'bad');
+    if (ok && itemId) G.UI.dayLogLine('钓到 ' + G.ITEMS[itemId].name);
+    if (ok) G.UI.settleable = true;
+  }
+  G.updateFishing = updateFishing;
+
+  /* ================= 粒子与音效 ================= */
+  const parts = [];
+  function particles(tx, ty, color) {
+    for (let i = 0; i < 8; i++) {
+      parts.push({
+        x: tx * TS + 8, y: ty * TS + 8, vx: (rng() - 0.5) * 60, vy: -rng() * 60 - 20,
+        life: 0.5 + rng() * 0.3, color, s: 1 + Math.floor(rng() * 2),
+      });
+    }
+  }
+  G.particles = parts;
+
+  // 极简WebAudio音效
+  let AC = null, muted = false;
+  G.toggleMute = function () { muted = !muted; return muted; };
+  G.sfx = function (name) {
+    if (muted) return;
+    try {
+      if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+      if (AC.state === 'suspended') AC.resume();
+      const t = AC.currentTime;
+      const o = AC.createOscillator(), g = AC.createGain();
+      o.connect(g); g.connect(AC.destination);
+      const conf = {
+        dig: ['square', 120, 0.08, 0.12], chop: ['sawtooth', 90, 0.1, 0.14],
+        water: ['sine', 500, 0.15, 0.1], plant: ['sine', 700, 0.06, 0.12],
+        pick: ['sine', 880, 0.07, 0.1], coin: ['square', 980, 0.06, 0.12],
+        error: ['sawtooth', 140, 0.15, 0.1], talk: ['sine', 440, 0.05, 0.08],
+        eat: ['sine', 300, 0.1, 0.1], cast: ['sine', 600, 0.12, 0.08],
+        bite: ['square', 1200, 0.09, 0.14], biteset: ['square', 800, 0.08, 0.12],
+        catch: ['square', 660, 0.1, 0.16], build: ['square', 300, 0.15, 0.14],
+        sleep: ['sine', 520, 0.3, 0.12],
+      }[name] || ['sine', 440, 0.05, 0.05];
+      o.type = conf[0];
+      o.frequency.setValueAtTime(conf[1], t);
+      if (name === 'coin' || name === 'catch' || name === 'sleep') o.frequency.setValueAtTime(conf[1] * 1.5, t + 0.08);
+      g.gain.setValueAtTime(conf[3], t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + conf[2]);
+      o.start(t); o.stop(t + conf[2] + 0.05);
+    } catch (e) { }
+  };
+
+  /* ================= 主更新 ================= */
+  G.update = function (dt) {
+    if (!G.running) return;
+    if (fish.active) { updateFishing(dt); return; }
+    if (G.paused) return;
+    const st = G.state;
+    if (fish.active) { updateFishing(dt); return; }
+    // 时间
+    st.minute += MIN_PER_SEC * dt;
+    if (st.minute >= DAY_END) {
+      G.UI.toast('你累倒了…被送回了床上（体力恢复减少）', 'bad');
+      st.map = 'farm'; st.px = 6 * TS + 8; st.py = 7 * TS + 12;
+      sleepNow(true);
+      return;
+    }
+    updatePlayer(dt);
+    updateNPCs(dt);
+    // 粒子
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 200 * dt;
+      if (p.life <= 0) parts.splice(i, 1);
+    }
+    G.UI.updateHint();
+  };
+
+  /* ================= 渲染 ================= */
+  G.render = function (ctx, dt) {
+    if (!G.state) return;
+    const st = G.state, m = G.MAPS[st.map];
+    const vw = G.view.w, vh = G.view.h;
+    const camX = Math.max(0, Math.min(st.px - vw / 2, m.w * TS - vw));
+    const camY = Math.max(0, Math.min(st.py - vh / 2, m.h * TS - vh));
+    G._cam = { x: camX, y: camY };
+    const x0 = Math.floor(camX / TS), y0 = Math.floor(camY / TS);
+    const x1 = Math.min(m.w - 1, x0 + Math.ceil(vw / TS)), y1 = Math.min(m.h - 1, y0 + Math.ceil(vh / TS));
+    const S = G.SPR, seasonTiles = S.tilesBySeason[st.season];
+    const time = performance.now() / 1000;
+    const wf = Math.floor(time * 1.6) % 2;
+
+    ctx.fillStyle = '#0e130d'; ctx.fillRect(0, 0, vw, vh);
+    ctx.save();
+    ctx.translate(-Math.round(camX), -Math.round(camY));
+
+    // 地形
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+      const t = m.terrain[ty][tx];
+      let spr = null;
+      if (t === '.') spr = seasonTiles.grass[(tx * 7 + ty * 13) % 4];
+      else if (t === ',') spr = seasonTiles.grass[(tx * 3 + ty * 5 + 2) % 4];
+      else if (t === 'p') spr = seasonTiles.path;
+      else if (t === 'w') spr = seasonTiles.water[wf];
+      else if (t === 'P') spr = S.pier;
+      else if (t === 'f') spr = S.floor;
+      else if (t === 'W') spr = S.wall;
+      if (spr) ctx.drawImage(spr, tx * TS, ty * TS);
+      if (st.map === 'farm') {
+        const ft = st.farmTiles[tx + ',' + ty];
+        if (ft && ft.tilled) ctx.drawImage(ft.wet ? S.watered : S.tilled, tx * TS, ty * TS);
+        if (ft && ft.crop) {
+          const c = G.CROPS[ft.crop.id];
+          const stage = ft.crop.dead ? 4 : Math.min(3, Math.floor(ft.crop.prog / c.days * 3.4));
+          ctx.drawImage(S.crops[ft.crop.id][stage], tx * TS, ty * TS);
+        }
+      }
+      if (st.map === 'home') {
+        const rug = m.props.find(p => p.type === 'rug');
+        if (rug && tx >= rug.x && tx < rug.x + rug.w && ty >= rug.y && ty < rug.y + rug.h) ctx.drawImage(S.rug, tx * TS, ty * TS);
+      }
+      if (st.map === 'lake' && st.built.bridge && G.MAPS.lake.bridgeTiles.some(b => b.x === tx && b.y === ty)) ctx.drawImage(S.bridge, tx * TS, ty * TS);
+    }
+
+    // 收集可排序绘制物
+    const draws = [];
+    (m.props || []).forEach(p => {
+      if (p.type === 'rug') return;
+      draws.push({ y: p.y * TS + TS, kind: 'prop', p });
+    });
+    (m.buildings || []).forEach(b => draws.push({ y: (b.y + b.h) * TS, kind: 'building', b }));
+    if (st.map === 'farm') {
+      Object.keys(st.farmTiles).forEach(k => {
+        const ft = st.farmTiles[k];
+        if (!ft.o) return;
+        const [tx, ty] = k.split(',').map(Number);
+        draws.push({ y: ty * TS + TS, kind: 'farmobj', tx, ty, ft });
+      });
+      st.placed.forEach(p => draws.push({ y: (p.y + (G.BUILDS[p.type].h || 1)) * TS, kind: 'placed', p }));
+    }
+    if (st.map === 'forest') {
+      (G.MAPS.forest.forageSpots || []).forEach(s => {
+        const key = 'f' + s.x + ',' + s.y;
+        if (st.foragePicked[key] === st.day + st.year * 1000) return;
+        draws.push({ y: s.y * TS + TS, kind: 'forage', s });
+      });
+    }
+    Object.keys(npcPos).forEach(id => {
+      const p = npcPos[id];
+      if (p.map === st.map && G.npcSlot(G.NPCS.find(n => n.id === id), st.minute).map === st.map) {
+        draws.push({ y: p.y + 6, kind: 'npc', id, p });
+      }
+    });
+    draws.push({ y: st.py + 6, kind: 'player' });
+    draws.sort((a, b) => a.y - b.y);
+
+    const shadow = (x, y) => {
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.ellipse(x, y, 6, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+    };
+    const drawChar = (px, py, dir, frame, set) => {
+      shadow(px, py + 1);
+      const arr = set[dir] || set.down;
+      ctx.drawImage(arr[frame % arr.length], Math.round(px - 8), Math.round(py - 13));
+    };
+
+    draws.forEach(d => {
+      if (d.kind === 'prop') {
+        const p = d.p;
+        let spr = p.type === 'tree' ? S.trees[st.season]
+          : p.type === 'logpile' ? S.props.log
+          : S.props[p.type];
+        if (!spr) return;
+        ctx.drawImage(spr, p.x * TS, p.y * TS + TS - spr.height);
+      } else if (d.kind === 'building') {
+        const meta = S.buildings[d.b.type];
+        ctx.drawImage(meta.cv, d.b.x * TS, d.b.y * TS - meta.doorY);
+      } else if (d.kind === 'farmobj') {
+        const { tx, ty, ft } = d;
+        let spr = null;
+        if (ft.o === 'tree') spr = S.trees[st.season];
+        else if (ft.o === 'weed') spr = S.props.weed[st.season === 2 ? 1 : 0];
+        else spr = S.props[ft.o];
+        if (spr) ctx.drawImage(spr, tx * TS, ty * TS + TS - spr.height);
+        if (ft.o === 'rock' && ft.hp < 2) { ctx.fillStyle = '#00000033'; ctx.fillRect(tx * TS + 4, ty * TS + 4, 8, 8); }
+      } else if (d.kind === 'placed') {
+        const { p } = d;
+        const spr = p.type === 'coop' ? S.props.coop : S.props[p.type];
+        ctx.drawImage(spr, p.x * TS, p.y * TS + TS * (G.BUILDS[p.type].h || 1) - spr.height);
+        if (p.type === 'scarecrow') { /* 摇摆 */ }
+      } else if (d.kind === 'forage') {
+        const type = forageType(d.s);
+        const sprKey = type === 'berry' ? (st.season >= 0 ? 'bushBerry' : 'bush') : type === 'mushroom' ? 'mushroom' : type === 'winterroot' ? 'winterroot' : 'flower';
+        const spr = S.props[sprKey];
+        ctx.drawImage(spr, d.s.x * TS, d.s.y * TS + TS - spr.height);
+      } else if (d.kind === 'npc') {
+        const n = G.NPCS.find(v => v.id === d.id);
+        drawChar(d.p.x, d.p.y + 2, d.p.dir, d.p.frame, S.npcs[d.id]);
+        // 名牌
+        ctx.fillStyle = 'rgba(20,26,18,0.75)';
+        const nm = n.name.split(' ')[1] || n.name.split(' ')[0];
+        ctx.font = '7px monospace';
+        const w = ctx.measureText(nm).width + 6;
+        ctx.fillRect(d.p.x - w / 2, d.p.y - 22, w, 10);
+        ctx.fillStyle = '#ffe9b8';
+        ctx.fillText(nm, d.p.x - w / 2 + 3, d.p.y - 14.5);
+      } else if (d.kind === 'player') {
+        const st2 = G.state;
+        drawChar(st2.px, st2.py + 2, st2.dir, st2.frame, S.player);
+        if (G.placing) {
+          const t = G.facingTile();
+          const ok = G.placeValid(G.placing.type, t.x, t.y);
+          ctx.fillStyle = ok ? 'rgba(120,220,120,0.45)' : 'rgba(220,80,80,0.45)';
+          const def = G.BUILDS[G.placing.type];
+          ctx.fillRect(t.x * TS, t.y * TS, TS * (def.w || 1), TS * (def.h || 1));
+          ctx.strokeStyle = ok ? '#8fd45a' : '#e0453a';
+          ctx.strokeRect(t.x * TS + 0.5, t.y * TS + 0.5, TS * (def.w || 1) - 1, TS * (def.h || 1) - 1);
+        }
+      }
+    });
+
+    // 粒子
+    parts.forEach(p => {
+      ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 2));
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s);
+    });
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    /* ---- 天气粒子（屏幕空间） ---- */
+    if (st.weather === 'rain' || st.weather === 'storm') {
+      const n = st.weather === 'storm' ? 3 : 1;
+      ctx.strokeStyle = 'rgba(180,210,255,0.55)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 60 * n; i++) {
+        const rx = (hash(i, 1) * vw + time * (260 + hash(i, 2) * 120)) % vw;
+        const ry = (hash(i, 3) * vh + time * (420 + hash(i, 4) * 160)) % vh;
+        ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 3, ry + 9); ctx.stroke();
+      }
+      if (st.weather === 'storm' && Math.sin(time * 2.3) > 0.995) {
+        ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(0, 0, vw, vh);
+      }
+    } else if (st.weather === 'snow') {
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      for (let i = 0; i < 40; i++) {
+        const rx = (hash(i, 7) * vw + Math.sin(time + i) * 14 + time * 12) % vw;
+        const ry = (hash(i, 11) * vh + time * (35 + hash(i, 5) * 30)) % vh;
+        ctx.fillRect(rx, ry, 2, 2);
+      }
+    }
+
+    /* ---- 昼夜光照 ---- */
+    const min = st.minute;
+    let tint = null;
+    if (min < 480) tint = ['rgba(255,160,80,0.16)', 1];
+    else if (min < 540) tint = ['rgba(255,180,120,0.08)', 0];
+    else if (min < 1020) tint = null;
+    else if (min < 1140) tint = ['rgba(255,140,60,0.18)', 1];
+    else if (min < 1260) tint = ['rgba(80,60,140,0.30)', 1];
+    else tint = ['rgba(20,30,80,0.50)', 1];
+    if (st.weather === 'rain' || st.weather === 'storm') {
+      ctx.fillStyle = 'rgba(40,60,90,0.25)'; ctx.fillRect(0, 0, vw, vh);
+    } else if (st.weather === 'cloud') {
+      ctx.fillStyle = 'rgba(80,80,90,0.15)'; ctx.fillRect(0, 0, vw, vh);
+    }
+    if (tint) {
+      ctx.fillStyle = tint[0]; ctx.fillRect(0, 0, vw, vh);
+      // 夜晚灯光
+      if (min >= 1140 || min < 480) {
+        const lamps = [];
+        (m.props || []).forEach(p => { if (p.type === 'lamp') lamps.push(p); });
+        lamps.forEach(p => {
+          const sx = p.x * TS + 8 - camX, sy = p.y * TS + 4 - camY;
+          const gr = ctx.createRadialGradient(sx, sy, 2, sx, sy, 34);
+          gr.addColorStop(0, 'rgba(255,220,120,0.5)');
+          gr.addColorStop(1, 'rgba(255,220,120,0)');
+          ctx.fillStyle = gr;
+          ctx.fillRect(sx - 34, sy - 34, 68, 68);
+        });
+        // 建筑窗光
+        (m.buildings || []).forEach(b => {
+          const meta = S.buildings[b.type];
+          meta.glow.forEach(w => {
+            const sx = b.x * TS + w.x - camX, sy = b.y * TS + w.y - meta.doorY - camY;
+            ctx.fillStyle = 'rgba(255,225,140,0.75)';
+            ctx.fillRect(sx, sy, w.w, w.h);
+          });
+        });
+      }
+    }
+    // 过场黑幕
+    if (G.UI.fadeAlpha > 0) {
+      ctx.fillStyle = 'rgba(0,0,0,' + G.UI.fadeAlpha + ')';
+      ctx.fillRect(0, 0, vw, vh);
+    }
+  };
+})();
+
+;
+/* ============ 微光谷物语 · UI层 ============ */
+window.G = window.G || {};
+(function () {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+  const TS = G.TS;
+  const UI = G.UI = {};
+
+  let panelType = null;
+  let dialogQueue = [], dialogCb = null;
+  let settleCb = null;
+
+  /* ================= HUD ================= */
+  UI.refreshHUD = function () {
+    const st = G.state;
+    if (!st) return;
+    $('#hud-season').textContent = G.SEASON_NAMES[st.season];
+    $('#hud-day').textContent = st.day + '日';
+    $('#hud-year').textContent = '第' + st.year + '年';
+    $('#hud-weather').textContent = G.WEATHER_NAMES[st.weather];
+    $('#hud-clock').textContent = G.fmtClock(st.minute);
+    $('#gold-num').textContent = st.gold;
+    const pct = Math.max(0, st.energy / st.maxEnergy);
+    $('#energy-fill').style.transform = 'scaleX(' + pct + ')';
+    $('#energy-text').textContent = Math.ceil(st.energy);
+    const qb = $('#btn-quest');
+    const unfinished = G.QUESTS.filter(q => !st.quests[q.id].done && G.questProgress(q) > 0).length;
+    qb.textContent = unfinished ? '📜' + unfinished : '📜';
+  };
+
+  /* ================= 快捷栏 ================= */
+  const TOOLS = ['axe', 'pick', 'hoe', 'can', 'rod'];
+  UI.refreshHotbar = function () {
+    const st = G.state;
+    if (!st) return;
+    const hb = $('#hotbar');
+    hb.innerHTML = '';
+    TOOLS.forEach((id, i) => {
+      const d = document.createElement('div');
+      d.className = 'hb-slot' + (st.handTool === id ? ' sel' : '');
+      d.dataset.tool = id;
+      d.innerHTML = '<span class="key">' + (i + 1) + '</span>';
+      const cv = G.SPR.icons[id].cloneNode();
+      cv.getContext('2d').drawImage(G.SPR.icons[id], 0, 0);
+      d.appendChild(cv);
+      const nm = document.createElement('span'); nm.className = 'name'; nm.textContent = G.ITEMS[id].name;
+      d.appendChild(nm);
+      d.addEventListener('pointerdown', (e) => { e.preventDefault(); st.handTool = id; UI.refreshHotbar(); });
+      hb.appendChild(d);
+    });
+    const hand = document.createElement('div');
+    hand.className = 'hb-slot' + (st.handItem ? '' : '');
+    hand.style.opacity = st.handItem ? 1 : 0.5;
+    if (st.handItem) {
+      const cv = G.SPR.icons[st.handItem].cloneNode();
+      cv.getContext('2d').drawImage(G.SPR.icons[st.handItem], 0, 0);
+      hand.appendChild(cv);
+      const nm = document.createElement('span'); nm.className = 'name'; nm.textContent = G.ITEMS[st.handItem].name;
+      hand.appendChild(nm);
+      if ((st.inv[st.handItem] || 0) > 1) {
+        const c = document.createElement('span'); c.className = 'cnt'; c.textContent = st.inv[st.handItem];
+        hand.appendChild(c);
+      }
+    } else {
+      hand.innerHTML = '<span style="font-size:20px;opacity:.5">✋</span>';
+    }
+    hand.title = '手持物品（背包里选择）';
+    hand.addEventListener('pointerdown', (e) => { e.preventDefault(); UI.openPanel('bag'); });
+    hb.appendChild(hand);
+  };
+
+  /* ================= 对话框 ================= */
+  UI.dialog = function (name, text, cb) {
+    dialogQueue.push({ name, text });
+    if (cb) dialogCb = cb;
+    showNextDialog();
+  };
+  function showNextDialog() {
+    const d = $('#dialog');
+    if (!dialogQueue.length) {
+      d.classList.add('hidden');
+      G.paused = isFishingOpen() || panelType !== null;
+      if (dialogCb) { const cb = dialogCb; dialogCb = null; cb(); }
+      return;
+    }
+    const { name, text } = dialogQueue.shift();
+    $('#dialog-name').textContent = name;
+    $('#dialog-text').textContent = text;
+    d.classList.remove('hidden');
+    G.paused = true;
+  }
+  UI.advanceDialog = () => { if (!$('#dialog').classList.contains('hidden')) { G.sfx('talk'); showNextDialog(); return true; } return false; };
+  $('#dialog').addEventListener('pointerdown', () => UI.advanceDialog());
+
+  /* ================= 提示气泡 ================= */
+  UI.toast = function (text, type) {
+    const t = document.createElement('div');
+    t.className = 'toast ' + (type || '');
+    t.textContent = text;
+    $('#toasts').appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .4s'; }, 2200);
+    setTimeout(() => t.remove(), 2700);
+  };
+
+  UI.dayLogLine = function (text) {
+    if (G.state) G.state.dayLog.push(text);
+  };
+
+  /* ================= 过场 ================= */
+  UI.fadeAlpha = 0;
+  UI.transition = function (cb) {
+    G.paused = true;
+    const start = performance.now();
+    const step = () => {
+      const t = (performance.now() - start) / 220;
+      UI.fadeAlpha = Math.min(1, t);
+      if (t < 1) requestAnimationFrame(step);
+      else {
+        cb();
+        setTimeout(() => {
+          const start2 = performance.now();
+          const step2 = () => {
+            const t2 = (performance.now() - start2) / 220;
+            UI.fadeAlpha = Math.max(0, 1 - t2);
+            if (t2 < 1) requestAnimationFrame(step2);
+            else G.paused = false;
+          };
+          step2();
+        }, 90);
+      }
+    };
+    step();
+  };
+
+  /* ================= 通用面板 ================= */
+  UI.openPanel = function (type) {
+    if (type === panelType) { UI.closePanel(); return; }
+    panelType = type;
+    const titles = {
+      bag: '🎒 背包', quests: '📜 任务日志', map: '🗺️ 地图与村民', menu: '⚙️ 菜单',
+      shop: '🏪 玛莎杂货店', 'sell-bin': '🧺 出货箱', build: '🔨 老周锯木场',
+      settle: '🌙 今日结算', ending: '🎉 通关结算', help: '📖 玩法说明', stats: '📊 农场档案',
+    };
+    $('#panel-title').textContent = titles[type] || '';
+    $('#panel-wrap').classList.remove('hidden');
+    $('#panel-wrap').classList.toggle('above', G.running === false);
+    renderPanel(type);
+    G.paused = true;
+  };
+  UI.closePanel = function () {
+    panelType = null;
+    $('#panel-wrap').classList.add('hidden');
+    if ($('#fishing').classList.contains('hidden') && $('#dialog').classList.contains('hidden')) G.paused = false;
+  };
+  $('#panel-close').addEventListener('pointerdown', () => { if (panelType !== 'settle' && panelType !== 'ending') UI.closePanel(); });
+  $('#panel-wrap').addEventListener('pointerdown', (e) => { if (e.target === $('#panel-wrap') && panelType !== 'settle' && panelType !== 'ending') UI.closePanel(); });
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+  function iconImg(id, size) {
+    return '<canvas class="icn" data-icon="' + id + '" width="16" height="16" style="width:' + (size || 30) + 'px;height:' + (size || 30) + 'px"></canvas>';
+  }
+  function paintIcons(root) {
+    root.querySelectorAll('canvas[data-icon]').forEach(cv => {
+      const src = G.SPR.icons[cv.dataset.icon];
+      if (src) cv.getContext('2d').drawImage(src, 0, 0);
+    });
+  }
+
+  function invList(filter) {
+    const st = G.state;
+    return Object.keys(st.inv).filter(id => st.inv[id] > 0 && (!filter || filter(id)));
+  }
+
+  function renderSellList(mode) {
+    const st = G.state;
+    const ids = invList(id => G.ITEMS[id].sell > 0);
+    if (!ids.length) return '<div class="inv-empty">背包里还没有可以出售的货物<br>去种地、钓鱼、觅食吧！</div>';
+    let html = '';
+    ids.forEach(id => {
+      const it = G.ITEMS[id];
+      html += '<div class="item-row"><span class="nm">' + iconImg(id) + ' ' + esc(it.name) + ' ×' + st.inv[id] + '</span>' +
+        '<span><span class="pr">' + it.sell + '金/个</span> ' +
+        '<button class="btn" data-sell="' + id + '" data-n="1">卖1</button> ' +
+        '<button class="btn" data-sell="' + id + '" data-n="999">全卖</button></span></div>';
+    });
+    return html;
+  }
+  function wireSellList(root) {
+    root.querySelectorAll('[data-sell]').forEach(b => {
+      b.addEventListener('click', () => G.sellItem(b.dataset.sell, parseInt(b.dataset.n)));
+    });
+  }
+
+  function renderPanel(type) {
+    const st = G.state;
+    const body = $('#panel-body');
+    if (type === 'bag') {
+      const ids = Object.keys(st.inv).filter(id => st.inv[id] > 0);
+      let html = '<div class="inv-grid">';
+      ids.forEach(id => {
+        html += '<div class="inv-slot' + (st.handItem === id ? ' sel' : '') + '" data-inv="' + id + '" title="' + esc(G.ITEMS[id].name) + '">' +
+          iconImg(id, 44) + (st.inv[id] > 1 ? '<span class="cnt">' + st.inv[id] + '</span>' : '') + '</div>';
+      });
+      if (!ids.length) html += '<div class="inv-empty" style="grid-column:1/-1">空空如也</div>';
+      html += '</div><div class="inv-info" id="inv-info">点击物品查看详情；种子可以设为手持去播种，食物可以食用。</div><div id="inv-actions" style="margin-top:10px;display:flex;gap:8px;justify-content:center"></div>';
+      body.innerHTML = html;
+      body.querySelectorAll('[data-inv]').forEach(el => {
+        el.addEventListener('click', () => {
+          const id = el.dataset.inv, it = G.ITEMS[id];
+          body.querySelectorAll('.inv-slot').forEach(s => s.classList.remove('sel'));
+          el.classList.add('sel');
+          const eat = G.EATABLE.includes(id);
+          body.querySelector('#inv-info').innerHTML = '<b>' + esc(it.name) + '</b> ×' + st.inv[id] + '　售价 ' + it.sell + '金<br>' + esc(it.desc);
+          const act = body.querySelector('#inv-actions');
+          act.innerHTML = '';
+          if (it.cat === 'seed' || true) {
+            const hb = document.createElement('button'); hb.className = 'btn primary'; hb.textContent = '✋ 设为手持';
+            hb.addEventListener('click', () => { st.handItem = id; UI.refreshHotbar(); UI.toast('手持：' + it.name, ''); });
+            act.appendChild(hb);
+          }
+          if (eat) {
+            const eb = document.createElement('button'); eb.className = 'btn'; eb.textContent = '🍴 食用 +' + G.EAT_ENERGY[id] + '体力';
+            eb.addEventListener('click', () => { G.state.inv[id]--; if (G.state.inv[id] <= 0) delete G.state.inv[id]; G.gainEnergy(G.EAT_ENERGY[id]); G.sfx('eat'); UI.refreshHotbar(); renderPanel('bag'); UI.toast('吃了 ' + it.name + '，体力 +' + G.EAT_ENERGY[id], 'good'); });
+            act.appendChild(eb);
+          }
+          paintIcons(act);
+        });
+      });
+      paintIcons(body);
+      return;
+    }
+    if (type === 'quests') {
+      let html = '';
+      G.QUESTS.forEach(q => {
+        const qs = st.quests[q.id];
+        const prog = G.questProgress(q);
+        const pct = Math.round(prog / q.goal * 100);
+        html += '<div class="q-item' + (qs.done ? ' done' : '') + '">' +
+          '<div class="q-name"><span>' + esc(q.name) + '</span><span class="tag">' + (qs.done ? '已完成' : '进行中') + '</span></div>' +
+          '<div class="q-desc">' + esc(q.desc) + '</div>' +
+          '<div class="q-prog"><i style="width:' + pct + '%"></i></div>' +
+          '<div class="q-reward">进度 ' + prog + '/' + q.goal + ' · 奖励：' + (q.reward.gold ? q.reward.gold + '金' : '') +
+          (q.reward.items ? Object.keys(q.reward.items).filter(k => q.reward.items[k] > 0).map(k => ' ' + G.ITEMS[k].name + '×' + q.reward.items[k]).join('') : '') + '</div></div>';
+      });
+      const done = G.QUESTS.filter(q => st.quests[q.id].done).length;
+      html += '<div style="text-align:center;color:#8fa06b;font-size:12px">小镇恢复度 ' + G.recovery() + '%（任务 ' + done + '/' + G.QUESTS.length + '）</div>';
+      body.innerHTML = html;
+      return;
+    }
+    if (type === 'map') {
+      body.innerHTML = '<div class="map-canvas-wrap"><canvas id="mini-map" width="480" height="300"></canvas></div>' +
+        '<div class="npc-list" id="npc-list"></div>';
+      drawMiniMap();
+      const list = body.querySelector('#npc-list');
+      let html = '<div style="color:#cbb98a;font-size:12px;margin-bottom:4px">— 村民日程（随时间变化） · 当前 ' + G.fmtClock(st.minute) + ' —</div>';
+      G.NPCS.forEach(n => {
+        const loc = G.npcLocText(n);
+        const here = loc !== '休息中' && loc.includes(G.MAPS[st.map].name);
+        html += '<div class="npc-row"><span><i class="npc-dot" style="background:' + n.shirt + '"></i>' + esc(n.name) + '</span>' +
+          '<span class="' + (loc === '休息中' ? 'away' : 'loc') + '">' + (loc === '休息中' ? '😴 休息中' : (here ? '📍附近 · ' : '') + esc(loc)) + '</span></div>';
+      });
+      list.innerHTML = html;
+      return;
+    }
+    if (type === 'menu') {
+      body.innerHTML = '<div class="menu-list">' +
+        '<button class="menu-btn small" id="m-resume">▶ 继续游戏</button>' +
+        '<button class="menu-btn small" id="m-save">💾 保存游戏</button>' +
+        '<button class="menu-btn small" id="m-stats">📊 结算 / 农场档案</button>' +
+        '<button class="menu-btn small" id="m-help">📖 玩法说明</button>' +
+        '<button class="menu-btn small" id="m-sound">🔊 音效：开</button>' +
+        '<button class="menu-btn small" id="m-title" style="border-color:#8c3b30">🏠 回到标题</button>' +
+        '<button class="menu-btn small" id="m-restart" style="border-color:#8c3b30">🔄 重新开始（清除存档）</button>' +
+        '</div>';
+      body.querySelector('#m-resume').addEventListener('click', UI.closePanel);
+      body.querySelector('#m-save').addEventListener('click', () => { G.save(); });
+      body.querySelector('#m-stats').addEventListener('click', () => renderPanel('stats'));
+      body.querySelector('#m-help').addEventListener('click', () => renderPanel('help'));
+      body.querySelector('#m-sound').addEventListener('click', (e) => { e.target.textContent = G.toggleMute() ? '🔇 音效：关' : '🔊 音效：开'; });
+      body.querySelector('#m-title').addEventListener('click', () => { G.save(true); UI.showTitle(); });
+      body.querySelector('#m-restart').addEventListener('click', () => {
+        body.innerHTML = '<div style="text-align:center;padding:16px"><p style="margin-bottom:14px">确定要清除存档并重新开始吗？<br> farm上的汗水可就都没啦！</p>' +
+          '<button class="btn danger" id="m-yes">确定重来</button> <button class="btn" id="m-no">再想想</button></div>';
+        body.querySelector('#m-yes').addEventListener('click', () => { G.eraseSave(); location.reload(); });
+        body.querySelector('#m-no').addEventListener('click', () => renderPanel('menu'));
+      });
+      return;
+    }
+    if (type === 'stats') {
+      const s = st.stats;
+      const done = G.QUESTS.filter(q => st.quests[q.id].done).length;
+      const rec = G.recovery();
+      body.innerHTML = '<div class="settle-day">农场档案 · 第' + st.year + '年' + G.SEASON_NAMES[st.season] + st.day + '日</div>' +
+        '<div class="progress-big"><div class="bar"><i style="width:' + rec + '%"></i></div><div class="lbl">小镇恢复度 ' + rec + '%</div></div>' +
+        '<div class="settle-grid">' +
+        cell('💰 ' + st.gold, '持有金币') + cell('📈 ' + s.earned, '累计收入') +
+        cell('🌱 ' + s.harvested, '收获作物') + cell('🎣 ' + s.fish, '钓鱼次数') +
+        cell('🔨 ' + s.built, '建造设施') + cell('🧹 ' + s.cleared, '清理杂物') +
+        cell('📜 ' + done + '/' + G.QUESTS.length, '完成任务') + cell('📅 ' + ((st.year - 1) * 112 + (st.season) * 28 + st.day), '经营天数') +
+        '</div><div style="text-align:center;margin-top:14px"><button class="btn primary" id="s-back">返回</button></div>';
+      body.querySelector('#s-back').addEventListener('click', () => renderPanel('menu'));
+      return;
+      function cell(v, k) { return '<div class="settle-cell"><div class="v">' + v + '</div><div class="k">' + k + '</div></div>'; }
+    }
+    if (type === 'help') {
+      body.innerHTML = '<div class="help-sec"><h3>🎯 目标</h3><p>你继承了爷爷荒废的农场。清理土地、耕种收获、钓鱼赚钱、建造设施，完成任务，让微光镇重新繁荣起来！</p></div>' +
+        '<div class="help-sec"><h3>🎮 操作</h3><p>移动：<kbd>WASD</kbd>/<kbd>方向键</kbd> 或左侧摇杆<br>' +
+        '互动/使用手持物：<kbd>空格</kbd>/<kbd>E</kbd> 或右侧「互动」按钮<br>' +
+        '使用工具：<kbd>F</kbd> 或右侧「工具」按钮（快捷栏1-6切换工具）<br>' +
+        '背包 <kbd>I</kbd> · 任务 <kbd>J</kbd> · 地图 <kbd>M</kbd> · 菜单 <kbd>Esc</kbd></p></div>' +
+        '<div class="help-sec"><h3>🌱 耕种</h3><p>锄头开垦 → 种子播种（手持种子+互动）→ 每天浇水（或等下雨）→ 成熟后互动收获。作物只在当季生长，换季会枯萎。雨雪天自动浇水。</p></div>' +
+        '<div class="help-sec"><h3>🎣 钓鱼</h3><p>装备鱼竿面向水面按工具键抛竿，浮标闪烁时按互动提竿，按住屏幕/空格抬起鱼框套住游动的鱼。湖边栈桥修好后可到深水区钓稀有鱼。</p></div>' +
+        '<div class="help-sec"><h3>💰 赚钱</h3><p>农场出货箱、杂货店都能卖货。杂货店营业 8:00-20:00，按季节出售种子。</p></div>' +
+        '<div class="help-sec"><h3>🔨 建造</h3><p>去森林锯木场找老周（或到锯木场门口）建造：洒水器自动浇灌、稻草人防乌鸦、鸡舍每天产蛋、小桥通往深水区。</p></div>' +
+        '<div class="help-sec"><h3>😴 作息</h3><p>家里的床可以睡觉结算这一天；凌晨2:00会累倒（体力惩罚）。体力不足时吃点农产品吧。</p></div>' +
+        '<div style="text-align:center"><button class="btn primary" id="h-back">明白了</button></div>';
+      body.querySelector('#h-back').addEventListener('click', () => { if (G.running) renderPanel('menu'); else UI.closePanel(); });
+      return;
+    }
+    if (type === 'shop') {
+      const season = st.season;
+      const seeds = Object.keys(G.CROPS).filter(cid => G.CROPS[cid].seasons.includes(season)).map(cid => G.CROPS[cid].seed);
+      let html = '<div style="font-size:12px;color:#cbb98a;margin-bottom:8px">“当季种子新鲜上市！” · 你的金币：' + st.gold + '</div>';
+      seeds.forEach(sid => {
+        const c = G.CROPS[G.ITEMS[sid].cropId];
+        html += '<div class="item-row"><span class="nm">' + iconImg(sid) + ' ' + esc(c.name) + '种子（' + c.days + '天）</span>' +
+          '<span><span class="pr">' + c.seedCost + '金</span> <button class="btn" data-buy="' + sid + '" data-n="1">买1</button> <button class="btn" data-buy="' + sid + '" data-n="5">买5</button></span></div>';
+      });
+      html += '<div style="margin:14px 0 6px;color:#ffd964;font-size:13px">— 出售货物 —</div>' + renderSellList();
+      body.innerHTML = html;
+      paintIcons(body);
+      wireSellList(body);
+      body.querySelectorAll('[data-buy]').forEach(b => {
+        b.addEventListener('click', () => {
+          const sid = b.dataset.buy, n = parseInt(b.dataset.n);
+          const cost = G.ITEMS[sid].seedCost * n;
+          if (st.gold < cost) { UI.toast('金币不足', 'bad'); G.sfx('error'); return; }
+          st.gold -= cost; G.addItem(sid, n);
+          G.sfx('coin'); UI.refreshHUD();
+          UI.toast('购买了 ' + G.ITEMS[sid].name + ' ×' + n, 'good');
+          renderPanel('shop');
+        });
+      });
+      return;
+    }
+    if (type === 'sell-bin') {
+      body.innerHTML = '<div style="font-size:12px;color:#cbb98a;margin-bottom:8px">把货物卖给来收货的商人 · 全部当场结算</div>' + renderSellList();
+      paintIcons(body); wireSellList(body);
+      return;
+    }
+    if (type === 'build') {
+      let html = '<div style="font-size:12px;color:#cbb98a;margin-bottom:8px">“好木头配好图纸。” · 金币 ' + st.gold + ' · 木头 ' + (st.inv.wood || 0) + '</div>';
+      Object.keys(G.BUILDS).forEach(id => {
+        const b = G.BUILDS[id], c = b.cost;
+        const owned = id === 'bridge' ? st.built.bridge : false;
+        const afford = st.gold >= c.gold && (!c.wood || (st.inv.wood || 0) >= c.wood);
+        html += '<div class="item-row"><span class="nm">' + iconImg(id) + '<div><b>' + b.name + '</b><br>' +
+          '<span style="font-size:12px;color:#cbb98a">' + b.desc + '</span></div></span>' +
+          '<span class="pr" style="text-align:right">' + c.gold + '金' + (c.wood ? '+' + c.wood + '木' : '') + '<br>' +
+          (owned ? '<span style="color:#8fd45a">已建成</span>' : '<button class="btn primary" data-build="' + id + '" ' + (afford ? '' : 'disabled') + '>建造</button>') + '</span></div>';
+      });
+      html += '<div style="font-size:12px;color:#8a7c5c;margin-top:10px">洒水器/稻草人/鸡舍放置在农场空地；小桥在湖边断口处建造。</div>';
+      body.innerHTML = html;
+      paintIcons(body);
+      body.querySelectorAll('[data-build]').forEach(b => {
+        b.addEventListener('click', () => G.startPlace(b.dataset.build));
+      });
+      return;
+    }
+    if (type === 'settle') {
+      const snap = st.daySnap, s = st.stats;
+      const dGold = st.gold - snap.gold;
+      const lines = st.dayLog.length ? st.dayLog.map(l => '· ' + esc(l)).join('<br>') : '· 平静的一天';
+      body.innerHTML = '<div class="settle-day">🌙 第' + st.year + '年' + G.SEASON_NAMES[st.season] + st.day + '日 · 结算</div>' +
+        '<div class="settle-grid">' +
+        '<div class="settle-cell"><div class="v" style="color:' + (dGold >= 0 ? '#ffd964' : '#e0453a') + '">' + (dGold >= 0 ? '+' : '') + dGold + '</div><div class="k">今日收支</div></div>' +
+        '<div class="settle-cell"><div class="v">+' + (s.harvested - snap.harvested) + '</div><div class="k">收获作物</div></div>' +
+        '<div class="settle-cell"><div class="v">+' + (s.fish - snap.fish) + '</div><div class="k">今日钓鱼</div></div>' +
+        '<div class="settle-cell"><div class="v">+' + (s.cleared - snap.cleared) + '</div><div class="k">清理杂物</div></div>' +
+        '</div>' +
+        '<div class="progress-big" style="margin-top:12px"><div class="bar"><i style="width:' + G.recovery() + '%"></i></div><div class="lbl">小镇恢复度 ' + G.recovery() + '%</div></div>' +
+        '<div class="settle-log">' + lines + '</div>' +
+        '<div style="text-align:center;margin-top:12px"><button class="btn primary" id="settle-next">☀️ 开始新的一天</button></div>';
+      body.querySelector('#settle-next').addEventListener('click', () => {
+        UI.closePanel();
+        if (settleCb) { const cb = settleCb; settleCb = null; cb(); }
+        UI.toast(G.WEATHER_NAMES[st.weather] + ' · 新的一天开始了！', 'good');
+        G.sfx('sleep');
+      });
+      return;
+    }
+    if (type === 'ending') {
+      const s = st.stats;
+      const totalDays = (st.year - 1) * 112 + st.season * 28 + st.day;
+      body.innerHTML = '<div class="settle-day">🎉 微光镇复兴了！</div>' +
+        '<p style="text-align:center;color:#cbb98a;font-size:13px">在你的打理下，荒废的农场重新飘起炊烟，<br>小镇的广场又热闹了起来。格雷戈里镇长为你颁发了「荣誉镇民」勋章！</p>' +
+        '<div class="progress-big"><div class="bar"><i style="width:100%"></i></div><div class="lbl">小镇恢复度 100%</div></div>' +
+        '<div class="settle-grid">' +
+        '<div class="settle-cell"><div class="v">' + totalDays + '</div><div class="k">经营天数</div></div>' +
+        '<div class="settle-cell"><div class="v">' + s.earned + '</div><div class="k">累计收入</div></div>' +
+        '<div class="settle-cell"><div class="v">' + s.harvested + '</div><div class="k">收获作物</div></div>' +
+        '<div class="settle-cell"><div class="v">' + s.fish + '</div><div class="k">钓鱼次数</div></div>' +
+        '</div>' +
+        '<div style="text-align:center;margin-top:14px;display:flex;gap:10px;justify-content:center">' +
+        '<button class="btn primary" id="e-continue">继续经营</button>' +
+        '<button class="btn" id="e-restart">重新开始</button></div>';
+      body.querySelector('#e-continue').addEventListener('click', UI.closePanel);
+      body.querySelector('#e-restart').addEventListener('click', () => { G.eraseSave(); location.reload(); });
+      return;
+    }
+  }
+
+  function drawMiniMap() {
+    const cvEl = $('#mini-map');
+    if (!cvEl) return;
+    const ctx = cvEl.getContext('2d');
+    const st = G.state, m = G.MAPS[st.map];
+    const scale = Math.min(cvEl.width / m.w, cvEl.height / m.h);
+    const ox = (cvEl.width - m.w * scale) / 2, oy = (cvEl.height - m.h * scale) / 2;
+    ctx.fillStyle = '#171208'; ctx.fillRect(0, 0, cvEl.width, cvEl.height);
+    const colors = { '.': '#5f9e3e', ',': '#4a7d2e', p: '#d8c08a', w: '#3f76b5', P: '#b08a5a', f: '#c9a878', W: '#8a7a5a' };
+    if (st.season === 2) { colors['.'] = '#a5813c'; colors[','] = '#8a6a2e'; }
+    if (st.season === 3) { colors['.'] = '#cfd8dc'; colors[','] = '#b8c4ca'; }
+    for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+      ctx.fillStyle = colors[m.terrain[y][x]] || '#5f9e3e';
+      ctx.fillRect(ox + x * scale, oy + y * scale, scale + 0.5, scale + 0.5);
+    }
+    // 出口标记
+    ctx.fillStyle = '#ffd964';
+    (m.exits || []).forEach(e => ctx.fillRect(ox + e.x * scale - 1, oy + e.y * scale - 1, e.w * scale + 2, e.h * scale + 2));
+    // 建筑
+    ctx.fillStyle = '#b5533c';
+    (m.buildings || []).forEach(b => ctx.fillRect(ox + b.x * scale, oy + b.y * scale, b.w * scale, b.h * scale));
+    // NPC
+    G.NPCS.forEach(n => {
+      const slot = G.npcSlot(n, st.minute);
+      if (!slot.map || slot.map !== st.map) return;
+      ctx.fillStyle = n.shirt;
+      ctx.beginPath(); ctx.arc(ox + (slot.x + 0.5) * scale, oy + (slot.y + 0.5) * scale, Math.max(2.5, scale * 0.4), 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+    });
+    // 玩家
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#2a2018';
+    const px = ox + st.px / TS * scale, py = oy + st.py / TS * scale;
+    ctx.beginPath(); ctx.arc(px, py, Math.max(3, scale * 0.45), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // 标签
+    ctx.fillStyle = '#ffe9b8'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(m.name, cvEl.width / 2, oy + m.h * scale + 14);
+    ctx.textAlign = 'left';
+  }
+
+  /* ================= 面向提示 ================= */
+  UI.updateHint = function () {
+    const st = G.state;
+    if (!st || G.paused) { $('#tile-hint').classList.add('hidden'); return; }
+    const t = G.facingTile();
+    const m = G.MAPS[st.map];
+    if (t.x < 0 || t.y < 0 || t.x >= m.w || t.y >= m.h) { $('#tile-hint').classList.add('hidden'); return; }
+    let txt = null;
+    const npc = G.facingNPC();
+    if (npc) txt = '💬 ' + npc.name;
+    else {
+      const b = (m.buildings || []).find(b => t.x >= b.x && t.x < b.x + b.w && t.y >= b.y && t.y < b.y + b.h);
+      const labels = { home: '🏠 进屋', shop: '🏪 杂货店', sawmill: '🔨 锯木场', mayor: '镇长家', cottage: '民居' };
+      if (b) txt = labels[b.type] || null;
+      if (!txt) {
+        const prop = (m.props || []).find(p => p.type !== 'rug' && t.x >= p.x && t.x < p.x + (p.w || 1) && t.y >= p.y && t.y < p.y + (p.h || 1));
+        if (prop) {
+          const pl = { bin: '🧺 出货箱', bed: '🛏️ 睡觉', sign: '📢 查看告示牌', logpile: '🪵 斧头砍木堆', well: '⛲ 老井' };
+          txt = pl[prop.type] || null;
+        }
+      }
+      if (!txt && st.map === 'forest') {
+        const spot = G.MAPS.forest.forageSpots.find(s => s.x === t.x && s.y === t.y);
+        if (spot && st.foragePicked['f' + t.x + ',' + t.y] !== st.day + st.year * 1000) {
+          txt = '✋ 采摘 ' + (G.MAPS.forest.forageSpots.indexOf(spot) % 2 === 0
+            ? (st.season === 2 ? '蘑菇' : st.season === 3 ? '雪参' : '野莓') : '野花');
+        }
+      }
+      if (!txt) {
+        const ft = st.farmTiles && st.farmTiles[t.x + ',' + t.y];
+        if (ft && ft.crop && !ft.crop.dead && ft.crop.prog >= G.CROPS[ft.crop.id].days) txt = '🥬 收获 ' + G.CROPS[ft.crop.id].name;
+        else if (st.handItem && G.ITEMS[st.handItem] && G.ITEMS[st.handItem].cat === 'seed' && ft && ft.tilled && !ft.crop) txt = '🌱 播种 ' + G.ITEMS[st.handItem].name;
+        else if (st.handTool === 'rod') {
+          const terr = m.terrain[t.y][t.x];
+          if (terr === 'w') txt = '🎣 抛竿钓鱼';
+        }
+      }
+    }
+    const el = $('#tile-hint');
+    if (txt) {
+      const scale = G.view.scale;
+      el.textContent = txt;
+      el.style.left = ((st.px - G._cam.x) * scale) + 'px';
+      el.style.top = ((st.py - 30 - G._cam.y) * scale) + 'px';
+      el.classList.remove('hidden');
+    } else el.classList.add('hidden');
+  };
+
+  /* ================= 睡觉 ================= */
+  UI.confirmSleep = function () {
+    UI.openPanel('sleep-confirm');
+  };
+  // 注册临时面板类型
+  const _origRender = renderPanel;
+  renderPanel = function (type) {
+    if (type === 'sleep-confirm') {
+      $('#panel-title').textContent = '🛏️ 睡觉';
+      const body = $('#panel-body');
+      body.innerHTML = '<div style="text-align:center;padding:10px"><p style="margin-bottom:14px">要结束今天，上床睡觉吗？<br><span style="font-size:12px;color:#8a7c5c">睡觉会结算当日收入并进入早晨</span></p>' +
+        '<button class="btn primary" id="sl-yes">😴 睡觉</button> <button class="btn" id="sl-no">再忙一会儿</button></div>';
+      body.querySelector('#sl-yes').addEventListener('click', () => {
+        UI.closePanel();
+        G.sfx('sleep');
+        setTimeout(() => UI.showSettle(() => G.newDay(false)), 200);
+      });
+      body.querySelector('#sl-no').addEventListener('click', UI.closePanel);
+      return;
+    }
+    _origRender(type);
+  };
+  UI.showSettle = function (cb) {
+    settleCb = cb;
+    G.paused = true;
+    UI.openPanel('settle');
+  };
+  UI.showEnding = function () {
+    G.sfx('catch');
+    UI.openPanel('ending');
+  };
+
+  /* ================= 钓鱼界面 ================= */
+  function isFishingOpen() { return !$('#fishing').classList.contains('hidden'); }
+  UI.showFishing = function (on) {
+    $('#fishing').classList.toggle('hidden', !on);
+    G.paused = on;
+  };
+  UI.fishMsg = function (t) { $('#fish-tip').textContent = t; };
+  UI.drawFishing = function (ctx) {
+    const cvEl = $('#fish-canvas');
+    const x = cvEl.getContext('2d');
+    const W = cvEl.width, H = cvEl.height;
+    x.fillStyle = '#1d3040'; x.fillRect(0, 0, W, H);
+    x.fillStyle = 'rgba(255,255,255,0.06)';
+    for (let j = 0; j < H; j += 12) x.fillRect(0, j + (Math.floor(performance.now() / 300) % 2) * 2, W, 1);
+    // 进度
+    x.fillStyle = '#0e1620'; x.fillRect(10, 6, W - 20, 10);
+    x.fillStyle = '#8fd45a'; x.fillRect(11, 7, (W - 22) * Math.max(0, Math.min(1, G.fishing.prog)), 8);
+    x.fillStyle = '#0e1620'; x.fillRect(10, 20, W - 20, 4);
+    x.fillStyle = '#e0453a'; x.fillRect(11, 21, (W - 22) * Math.max(0, Math.min(1, G.fishing.timer / 7)), 2);
+    // 鱼
+    const fy = G.fishing.fishY;
+    x.fillStyle = G.fishing.deep ? '#e8d05a' : '#7cc4e8';
+    x.fillRect(24, fy - 4, 14, 8);
+    x.fillRect(20, fy - 2, 4, 4);
+    x.fillRect(36, fy - 3, 3, 6);
+    x.fillStyle = '#2a2018'; x.fillRect(26, fy - 2, 2, 2);
+    // 鱼框
+    const by = G.fishing.barY, BH = 42;
+    x.strokeStyle = G.fishing.holding ? '#8fd45a' : '#e8e8e8';
+    x.lineWidth = 2;
+    x.strokeRect(18, by, 24, BH);
+    x.fillStyle = 'rgba(143,212,90,0.18)';
+    x.fillRect(19, by + 1, 22, BH - 2);
+    // 咬钩提示
+    if (G.fishing.bite && G.fishing.phase === 'wait') {
+      x.fillStyle = '#e0453a';
+      x.font = 'bold 28px sans-serif'; x.textAlign = 'center';
+      x.fillText('!', W / 2, 60 + Math.sin(performance.now() / 80) * 4);
+    }
+    x.fillStyle = 'rgba(255,255,255,0.5)';
+    x.font = '10px sans-serif'; x.textAlign = 'center';
+    x.fillText(G.fishing.deep ? '🌊 深水区' : '🌤️ 浅水区', W / 2, H - 10);
+  };
+
+  /* ================= 触屏控件 ================= */
+  function setupTouch() {
+    const base = $('#joy-base'), stick = $('#joy-stick');
+    let pid = null;
+    const setStick = (dx, dy) => {
+      stick.style.left = (32 + dx * 34) + 'px';
+      stick.style.top = (32 + dy * 34) + 'px';
+    };
+    base.addEventListener('pointerdown', (e) => {
+      pid = e.pointerId;
+      base.setPointerCapture(pid);
+      e.preventDefault();
+    });
+    base.addEventListener('pointermove', (e) => {
+      if (e.pointerId !== pid) return;
+      const r = base.getBoundingClientRect();
+      let dx = (e.clientX - r.left - r.width / 2) / (r.width / 2);
+      let dy = (e.clientY - r.top - r.height / 2) / (r.height / 2);
+      const mag = Math.hypot(dx, dy);
+      if (mag > 1) { dx /= mag; dy /= mag; }
+      G.input.jx = Math.abs(dx) > 0.18 ? dx : 0;
+      G.input.jy = Math.abs(dy) > 0.18 ? dy : 0;
+      setStick(dx, dy);
+      e.preventDefault();
+    });
+    const endJoy = (e) => {
+      if (e.pointerId !== pid) return;
+      pid = null;
+      G.input.jx = 0; G.input.jy = 0;
+      setStick(0, 0);
+    };
+    base.addEventListener('pointerup', endJoy);
+    base.addEventListener('pointercancel', endJoy);
+
+    $('#btn-act').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (isFishingOpen()) { G.fishPress(); G.fishHold(true); return; }
+      if (UI.advanceDialog()) return;
+      if (G.running) G.doInteract();
+    });
+    $('#btn-act').addEventListener('pointerup', () => G.fishHold(false));
+    $('#btn-tool').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (G.running) G.doTool();
+    });
+    $('#fishing').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      G.fishPress(); G.fishHold(true);
+    });
+    $('#fishing').addEventListener('pointerup', () => G.fishHold(false));
+    $('#fishing').addEventListener('pointerleave', () => G.fishHold(false));
+  }
+
+  /* ================= 键盘 ================= */
+  function setupKeys() {
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat && !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) return;
+      const k = e.key;
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(k)) e.preventDefault();
+      const st = G.state;
+      switch (k) {
+        case 'w': case 'W': case 'ArrowUp': G.input.up = 1; break;
+        case 's': case 'S': case 'ArrowDown': G.input.down = 1; break;
+        case 'a': case 'A': case 'ArrowLeft': G.input.left = 1; break;
+        case 'd': case 'D': case 'ArrowRight': G.input.right = 1; break;
+        case ' ': case 'Enter': case 'e': case 'E':
+          if (UI.advanceDialog()) return;
+          if (isFishingOpen()) { G.fishPress(); G.fishHold(true); return; }
+          if (G.running) G.doInteract();
+          break;
+        case 'f': case 'F':
+          if (G.running && !G.paused) G.doTool();
+          break;
+        case 'i': case 'I': if (G.running) UI.openPanel('bag'); break;
+        case 'j': case 'J': if (G.running) UI.openPanel('quests'); break;
+        case 'm': case 'M': if (G.running) UI.openPanel('map'); break;
+        case 'Escape':
+          if (G.placing) { G.placing = null; UI.toast('已取消建造', ''); return; }
+          if (!panelType) UI.openPanel('menu');
+          else if (panelType !== 'settle' && panelType !== 'ending') UI.closePanel();
+          break;
+        case '1': case '2': case '3': case '4': case '5':
+          if (st) { st.handTool = TOOLS[parseInt(k) - 1]; UI.refreshHotbar(); }
+          break;
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      const k = e.key;
+      switch (k) {
+        case 'w': case 'W': case 'ArrowUp': G.input.up = 0; break;
+        case 's': case 'S': case 'ArrowDown': G.input.down = 0; break;
+        case 'a': case 'A': case 'ArrowLeft': G.input.left = 0; break;
+        case 'd': case 'D': case 'ArrowRight': G.input.right = 0; break;
+        case ' ': case 'Enter': case 'e': case 'E': G.fishHold(false); break;
+      }
+    });
+  }
+
+  /* ================= HUD按钮 ================= */
+  function setupButtons() {
+    $('#btn-bag').addEventListener('pointerdown', () => UI.openPanel('bag'));
+    $('#btn-quest').addEventListener('pointerdown', () => UI.openPanel('quests'));
+    $('#btn-map').addEventListener('pointerdown', () => UI.openPanel('map'));
+    $('#btn-menu').addEventListener('pointerdown', () => UI.openPanel('menu'));
+  }
+
+  /* ================= 开始画面 ================= */
+  UI.showTitle = function () {
+    G.running = false;
+    $('#start-screen').classList.remove('hidden');
+    $('#hud').classList.add('hidden');
+    $('#hotbar').classList.add('hidden');
+    $('#joystick').classList.add('hidden');
+    $('#action-btns').classList.add('hidden');
+    UI.closePanel();
+    $('#btn-continue').classList.toggle('hidden', !G.hasSave());
+  };
+  UI.hideTitle = function () {
+    $('#start-screen').classList.add('hidden');
+    $('#hud').classList.remove('hidden');
+    $('#hotbar').classList.remove('hidden');
+    document.body.classList.add('touch-ui');
+    if (document.body.classList.contains('touch-ui')) {
+      $('#joystick').classList.remove('hidden');
+      $('#action-btns').classList.remove('hidden');
+    }
+    G.running = true;
+  };
+
+  UI.startGame = function (isNew) {
+    if (isNew || !G.load()) G.newGame();
+    UI.refreshHUD();
+    UI.refreshHotbar();
+    UI.hideTitle();
+    if (isNew && !G.state.flags.intro) {
+      G.state.flags.intro = 1;
+      G.save(true);
+      const intro = [
+        ['镇长格雷戈里', '孩子，你爷爷留下的农场就在镇西边。杂草丛生，但土地肥沃得很！'],
+        ['镇长格雷戈里', '屋里有一把锄头、水壶、斧头、镐和鱼竿，杂货店玛莎那儿能买到种子。'],
+        ['镇长格雷戈里', '先用锄头清理杂物、开垦几块地种下去吧！累了就回家上床睡觉。有事随时按 J 看任务日志！'],
+      ];
+      let i = 0;
+      const next = () => {
+        if (i < intro.length) { UI.dialog(intro[i][0], intro[i][1], next); i++; }
+        else { UI.toast('提示：面向地块按 互动/空格 使用物品，按 F/工具 使用工具', ''); }
+      };
+      next();
+    } else {
+      UI.toast('欢迎回来，' + G.SEASON_NAMES[G.state.season] + G.state.day + '日 · ' + G.WEATHER_NAMES[G.state.weather], 'good');
+    }
+  };
+
+  UI.setup = function () {
+    setupTouch();
+    setupKeys();
+    setupButtons();
+    $('#btn-new').addEventListener('click', () => UI.startGame(true));
+    $('#btn-continue').addEventListener('click', () => UI.startGame(false));
+    $('#btn-help').addEventListener('click', () => UI.openPanel('help'));
+  };
+
+  window.addEventListener('visibilitychange', () => { if (document.hidden && G.running) G.save(true); });
+})();
+
+;
+/* ============ 微光谷物语 · 主入口 ============ */
+window.G = window.G || {};
+(function () {
+  'use strict';
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  let lastT = 0;
+
+  function resize() {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    // 选择整数缩放：保证视野至少 22x12 瓦片，桌面更大视野
+    let scale = Math.max(2, Math.floor(Math.min(vw / (21 * 16), vh / (13 * 16))));
+    if (vw / scale < 15 * 16) scale = 2;
+    G.view.scale = scale;
+    G.view.w = Math.ceil(vw / scale);
+    G.view.h = Math.ceil(vh / scale);
+    canvas.width = G.view.w;
+    canvas.height = G.view.h;
+    ctx.imageSmoothingEnabled = false;
+  }
+  window.addEventListener('resize', resize);
+
+  function loop(t) {
+    requestAnimationFrame(loop);
+    const dt = Math.min(0.05, (t - lastT) / 1000 || 0.016);
+    lastT = t;
+    if (G.running && G.state) {
+      G.update(dt);
+      G.render(ctx, dt);
+      G._cam && G.UI.updateHint();
+      if (G.fishing.active) G.UI.drawFishing(ctx);
+    } else if (!G.running) {
+      drawStartBg(ctx, t / 1000);
+    }
+  }
+
+  // 标题背景：缓动的像素农场小景
+  function drawStartBg(ctx, time) {
+    const w = canvas.width, h = canvas.height;
+    const sc = document.getElementById('start-canvas');
+    if (!sc) return;
+    if (sc.width !== w || sc.height !== h) { sc.width = w; sc.height = h; }
+    const x = sc.getContext('2d');
+    x.imageSmoothingEnabled = false;
+    // 天空渐变（黄昏→夜循环缓慢变化）
+    const ph = (Math.sin(time * 0.05) + 1) / 2;
+    const sky = x.createLinearGradient(0, 0, 0, h * 0.6);
+    sky.addColorStop(0, ph > 0.5 ? '#2b3a66' : '#ffb36b');
+    sky.addColorStop(1, ph > 0.5 ? '#3f5a8a' : '#e88a5a');
+    x.fillStyle = sky; x.fillRect(0, 0, w, h * 0.6);
+    // 太阳/月亮
+    const cx = w * 0.75, cy = h * 0.18 + Math.sin(time * 0.05) * 4;
+    x.fillStyle = ph > 0.5 ? '#e8ecf2' : '#ffd964';
+    x.fillRect(cx - 6, cy - 6, 12, 12);
+    x.fillRect(cx - 8, cy - 2, 16, 4); x.fillRect(cx - 2, cy - 8, 4, 16);
+    // 远山与树林
+    x.fillStyle = '#3f5a3a'; x.fillRect(0, h * 0.42, w, h * 0.1);
+    x.fillStyle = '#33492f'; x.fillRect(0, h * 0.5, w, h * 0.2);
+    for (let i = 0; i < 14; i++) {
+      const tx = (i * 37 + 10) % w;
+      x.fillStyle = i % 3 === 0 ? '#2a3d26' : '#3a5232';
+      x.fillRect(tx, h * 0.38 + (i % 3) * 3, 10, 16);
+      x.fillRect(tx + 3, h * 0.36 + (i % 3) * 3, 4, 4);
+    }
+    // 农田
+    x.fillStyle = '#5f9e3e'; x.fillRect(0, h * 0.62, w, h * 0.38);
+    x.fillStyle = '#8a6a42';
+    for (let r = 0; r < 3; r++) x.fillRect(w * 0.1 + r * 26, h * 0.7 + r * 8, 120, 6);
+    // 小房子
+    x.fillStyle = '#d9b98a'; x.fillRect(w * 0.16, h * 0.56, 40, 26);
+    x.fillStyle = '#b5533c';
+    for (let j = 0; j < 10; j++) { const ins = Math.max(0, 6 - j); x.fillRect(w * 0.16 - ins, h * 0.56 - 10 + j, 40 + ins * 2, 2); }
+    x.fillStyle = '#5a3a20'; x.fillRect(w * 0.16 + 16, h * 0.56 + 14, 8, 12);
+    x.fillStyle = '#ffe98a'; x.fillRect(w * 0.16 + 4, h * 0.56 + 6, 6, 6); x.fillRect(w * 0.16 + 30, h * 0.56 + 6, 6, 6);
+    // 烟囱烟雾
+    const smoke = (time * 10) % 30;
+    x.fillStyle = 'rgba(240,240,240,0.5)';
+    x.fillRect(w * 0.16 + 46, h * 0.56 - 14 - smoke, 4, 4);
+    // 飘云
+    for (let i = 0; i < 4; i++) {
+      const cxx = ((time * (6 + i * 2) + i * 90) % (w + 60)) - 30;
+      x.fillStyle = ph > 0.5 ? 'rgba(200,210,230,0.5)' : 'rgba(255,235,210,0.7)';
+      x.fillRect(cxx, h * 0.12 + i * 14, 26, 6); x.fillRect(cxx + 6, h * 0.12 + i * 14 - 4, 14, 4);
+    }
+  }
+
+  function boot() {
+    G.buildSprites();
+    resize();
+    G.UI.setup();
+    G.UI.showTitle();
+    requestAnimationFrame(loop);
+  }
+  boot();
+})();
+
+</script>
+</body>
+</html>
