@@ -516,8 +516,8 @@ window.G = window.G || {};
         { type: 'flowerbed', x: 3, y: 8 }, { type: 'flowerbed', x: 8, y: 3 },
         { type: 'stump', x: 33, y: 3, static: true }, { type: 'tree', x: 2, y: 5, static: true },
         { type: 'tree', x: 36, y: 20, static: true }, { type: 'tree', x: 2, y: 17, static: true },
-        { type: 'fence', x: 3, y: 7 }, { type: 'fence', x: 4, y: 7 }, { type: 'fence', x: 6, y: 7 },
-        { type: 'fence', x: 7, y: 7 }, { type: 'fence', x: 3, y: 2 }, { type: 'fence', x: 3, y: 3 },
+        { type: 'fence', x: 3, y: 7 }, { type: 'fence', x: 4, y: 7 },
+        { type: 'fence', x: 3, y: 2 }, { type: 'fence', x: 3, y: 3 },
         { type: 'fence', x: 3, y: 4 }, { type: 'fence', x: 3, y: 5 }, { type: 'fence', x: 3, y: 6 },
         { type: 'lamp', x: 11, y: 4 },
       ],
@@ -1869,6 +1869,7 @@ window.G = window.G || {};
     scatterFarm(st);
     st.daySnap = snapDay(st);
     G.state = st;
+    G.unstick();
     return st;
   };
 
@@ -2123,6 +2124,24 @@ window.G = window.G || {};
   const input = G.input = { up: 0, down: 0, left: 0, right: 0, jx: 0, jy: 0 };
   let animT = 0;
 
+  // 安全网：若玩家坐标落在碰撞体内（如旧存档/出生点冲突），吸附到最近可通行瓦片
+  G.unstick = function () {
+    const st = G.state;
+    if (!st) return;
+    const tx = Math.floor(st.px / TS), ty = Math.floor(st.py / TS);
+    if (G.walkable(st.map, tx, ty)) return;
+    for (let r = 1; r <= 4; r++) {
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (G.walkable(st.map, tx + dx, ty + dy)) {
+          st.px = (tx + dx) * TS + 8;
+          st.py = (ty + dy) * TS + 12;
+          G.UI.dayLogLine('你感觉自己被卡住了，挪了个位置…');
+          return;
+        }
+      }
+    }
+  };
+
   function tryMove(dx, dy, dt) {
     const st = G.state, sp = 62 * dt;
     const hitbox = (x, y) => {
@@ -2163,7 +2182,7 @@ window.G = window.G || {};
     const tx = Math.floor(st.px / TS), ty = Math.floor(st.py / TS);
     for (const e of m.exits || []) {
       if (tx >= e.x && tx < e.x + e.w && ty >= e.y && ty < e.y + e.h) {
-        G.UI.transition(() => { st.map = e.to; st.px = e.tx * TS + 8; st.py = e.ty * TS + 12; G.save(true); G.UI.refreshHUD(); });
+        G.UI.transition(() => { st.map = e.to; st.px = e.tx * TS + 8; st.py = e.ty * TS + 12; G.unstick(); G.save(true); G.UI.refreshHUD(); });
         return true;
       }
     }
@@ -2253,7 +2272,7 @@ window.G = window.G || {};
 
   function interactBuilding(b) {
     const st = G.state;
-    if (b.type === 'home') { G.UI.transition(() => { st.map = 'home'; st.px = 5 * TS + 8; st.py = 6 * TS + 12; }); return true; }
+    if (b.type === 'home') { G.UI.transition(() => { st.map = 'home'; st.px = 5 * TS + 8; st.py = 6 * TS + 12; G.unstick(); }); return true; }
     if (b.type === 'shop') {
       if (st.minute >= 480 && st.minute < 1200) G.UI.openPanel('shop');
       else G.UI.dialog('玛莎杂货店', '打烊了～营业时间是 8:00-20:00。');
@@ -2634,6 +2653,7 @@ window.G = window.G || {};
     if (st.minute >= DAY_END) {
       G.UI.toast('你累倒了…被送回了床上（体力恢复减少）', 'bad');
       st.map = 'farm'; st.px = 6 * TS + 8; st.py = 7 * TS + 12;
+      G.unstick();
       sleepNow(true);
       return;
     }
@@ -3597,6 +3617,7 @@ window.G = window.G || {};
 
   UI.startGame = function (isNew) {
     if (isNew || !G.load()) G.newGame();
+    G.unstick();
     UI.refreshHUD();
     UI.refreshHotbar();
     UI.hideTitle();
