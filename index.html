@@ -2769,13 +2769,16 @@ window.G = window.G || {};
         const n = G.NPCS.find(v => v.id === d.id);
         drawChar(d.p.x, d.p.y + 2, d.p.dir, d.p.frame, S.npcs[d.id]);
         // 名牌
-        ctx.fillStyle = 'rgba(20,26,18,0.75)';
         const nm = n.name.split(' ')[1] || n.name.split(' ')[0];
-        ctx.font = '7px monospace';
-        const w = ctx.measureText(nm).width + 6;
-        ctx.fillRect(d.p.x - w / 2, d.p.y - 22, w, 10);
-        ctx.fillStyle = '#ffe9b8';
-        ctx.fillText(nm, d.p.x - w / 2 + 3, d.p.y - 14.5);
+        ctx.font = 'bold 8px monospace';
+        const w = ctx.measureText(nm).width + 8;
+        ctx.fillStyle = 'rgba(20,26,18,0.85)';
+        ctx.fillRect(d.p.x - w / 2, d.p.y - 24, w, 12);
+        ctx.fillStyle = '#2a2018';
+        ctx.fillText(nm, d.p.x - w / 2 + 5, d.p.y - 15);
+        ctx.fillText(nm, d.p.x - w / 2 + 3, d.p.y - 15.5);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(nm, d.p.x - w / 2 + 4, d.p.y - 15.5);
       } else if (d.kind === 'player') {
         const st2 = G.state;
         drawChar(st2.px, st2.py + 2, st2.dir, st2.frame, S.player);
@@ -2966,12 +2969,14 @@ window.G = window.G || {};
 
   /* ================= 提示气泡 ================= */
   UI.toast = function (text, type) {
+    const box = $('#toasts');
+    while (box.children.length >= 3) box.firstChild.remove();
     const t = document.createElement('div');
     t.className = 'toast ' + (type || '');
     t.textContent = text;
-    $('#toasts').appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .4s'; }, 2200);
-    setTimeout(() => t.remove(), 2700);
+    box.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .4s'; }, 2000);
+    setTimeout(() => t.remove(), 2500);
   };
 
   UI.dayLogLine = function (text) {
