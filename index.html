@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2b3a2f">
+<meta name="description" content="微光谷物语 - 原创像素风农场生活模拟游戏：清理荒废农场、耕种收获、钓鱼、建造设施、结识村民，逐步恢复小镇。">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>微光谷物语 · Glimmer Vale</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%B1%3C/text%3E%3C/svg%3E">
+<!--BUILD_CSS-->
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <!-- 顶部HUD -->
+  <div id="hud" class="ui hidden">
+    <div id="hud-left">
+      <div id="hud-date">
+        <span id="hud-season"></span><span id="hud-day"></span><span id="hud-year"></span>
+        <span id="hud-weather"></span>
+      </div>
+      <div id="hud-clock">6:00</div>
+    </div>
+    <div id="hud-right">
+      <div id="hud-gold"><span class="coin"></span><span id="gold-num">0</span></div>
+      <div id="hud-energy"><div id="energy-fill"></div><span id="energy-text">100</span></div>
+      <div id="hud-btns">
+        <button class="icon-btn" id="btn-bag" title="背包 (I)">🎒</button>
+        <button class="icon-btn" id="btn-quest" title="任务 (J)">📜</button>
+        <button class="icon-btn" id="btn-map" title="地图 (M)">🗺️</button>
+        <button class="icon-btn" id="btn-menu" title="菜单 (Esc)">⚙️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 快捷栏 -->
+  <div id="hotbar" class="ui hidden"></div>
+
+  <!-- 摇杆与按键（触屏） -->
+  <div id="joystick" class="ui hidden"><div id="joy-base"><div id="joy-stick"></div></div></div>
+  <div id="action-btns" class="ui hidden">
+    <button id="btn-tool" class="round-btn">工具</button>
+    <button id="btn-act" class="round-btn">互动</button>
+  </div>
+
+  <!-- 对话框 -->
+  <div id="dialog" class="panel hidden">
+    <div id="dialog-name"></div>
+    <div id="dialog-text"></div>
+    <div id="dialog-next">▼ 继续</div>
+  </div>
+
+  <!-- 通用面板（背包/任务/地图/菜单/商店/建造/出售/结算） -->
+  <div id="panel-wrap" class="hidden">
+    <div id="panel">
+      <div id="panel-head"><span id="panel-title"></span><button id="panel-close">✕</button></div>
+      <div id="panel-body"></div>
+    </div>
+  </div>
+
+  <!-- 钓鱼小游戏 -->
+  <div id="fishing" class="hidden">
+    <canvas id="fish-canvas" width="220" height="300"></canvas>
+    <div id="fish-tip">按住 / 触摸屏幕 抬起鱼钩，让鱼保持在框内！</div>
+  </div>
+
+  <!-- 提示气泡 -->
+  <div id="toasts"></div>
+
+  <!-- 交互提示 -->
+  <div id="tile-hint" class="hidden"></div>
+
+  <!-- 开始画面 -->
+  <div id="start-screen">
+    <canvas id="start-canvas" width="480" height="270"></canvas>
+    <div id="start-title">
+      <h1>微光谷物语</h1>
+      <p class="en">GLIMMER VALE</p>
+      <p class="sub">— 像素农场生活模拟 —</p>
+    </div>
+    <div id="start-btns">
+      <button id="btn-new" class="menu-btn">🌱 新的旅程</button>
+      <button id="btn-continue" class="menu-btn hidden">📖 继续旅程</button>
+      <button id="btn-help" class="menu-btn small">玩法说明</button>
+    </div>
+    <p id="start-foot">原创像素游戏 · 键盘 WASD/方向键移动 · 触屏虚拟摇杆</p>
+  </div>
+</div>
+<!--BUILD_JS-->
+</body>
+</html>
