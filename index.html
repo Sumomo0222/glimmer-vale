@@ -170,7 +170,8 @@ canvas { image-rendering:pixelated; image-rendering:crisp-edges; }
 .menu-btn.small { min-width:min(200px,50vw); font-size:13px; padding:9px 16px; letter-spacing:2px; }
 .menu-btn:active { transform:translateY(3px); box-shadow:none; }
 #btn-continue { border-color:#5aa254; }
-#start-foot { position:relative; margin-top:18px; font-size:11px; color:#7a6f55; text-align:center; padding:0 16px; }
+#start-foot { position:relative; margin-top:18px; font-size:11px; color:#d8cba6; text-align:center;
+  padding:0 16px; text-shadow:0 1px 2px rgba(0,0,0,.8); }
 
 /* 钓鱼 */
 #fishing { position:absolute; inset:0; z-index:28; display:flex; flex-direction:column;
@@ -180,8 +181,9 @@ canvas { image-rendering:pixelated; image-rendering:crisp-edges; }
   padding:6px 14px; border-radius:8px; }
 
 /* 提示 */
-#toasts { position:absolute; top:calc(76px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
+#toasts { position:absolute; top:calc(120px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
   z-index:40; display:flex; flex-direction:column; gap:6px; align-items:center; pointer-events:none; width:100%; }
+body.touch-ui #toasts { top:calc(190px + env(safe-area-inset-top)); }
 .toast { background:rgba(24,20,12,.92); border:2px solid #6b5334; color:#ffe9b8; font-size:13px;
   padding:7px 16px; border-radius:20px; animation:toast-in .25s; max-width:86vw; text-align:center; }
 .toast.good { border-color:#5aa254; color:#d6f5c8; }
@@ -1136,17 +1138,17 @@ window.G = window.G || {};
     sprinkler: [
       '................',
       '................',
-      '................',
-      '................',
-      '................',
-      '.......k........',
-      '......kgk.......',
+      '......kkkk......',
       '.....kgggk......',
-      '....kkoggkk.....',
-      '....kooooo k....',
-      '...kkooooookk...',
-      '...kmoooooomk...',
-      '...kkkkkkkkkk...',
+      '.....kgggk......',
+      '......kgk.......',
+      '....kkoggook....',
+      '...kooooooook...',
+      '..koooooooooo k.'.replace(' ', 'o'),
+      '..kooooooooook..',
+      '..kmoooooooomk..',
+      '..kkkkkkkkkkkk..',
+      '................',
       '................',
       '................',
       '................',
@@ -1494,13 +1496,16 @@ window.G = window.G || {};
     x.fillRect(5, 10, 2, 1); x.fillRect(9, 11, 2, 1); x.fillRect(7, 8, 2, 1);
     x.fillStyle = '#6b4a2a'; x.fillRect(6, 9, 4, 2);
     stages.push(c);
-    // 1 发芽
+    // 1 发芽（加高更醒目）
     ({ c, x } = cv(TS, TS));
+    x.fillStyle = '#4a7d2e';
+    x.fillRect(7, 7, 2, 6);
     x.fillStyle = '#5f9e3e';
-    x.fillRect(7, 9, 2, 4);
+    x.fillRect(4, 7, 3, 2); x.fillRect(9, 7, 3, 2);
     x.fillStyle = '#71b04e';
-    x.fillRect(5, 8, 2, 2); x.fillRect(9, 8, 2, 2);
-    x.fillStyle = '#8fd45a'; x.fillRect(7, 7, 2, 2);
+    x.fillRect(6, 5, 4, 2);
+    x.fillStyle = '#8fd45a';
+    x.fillRect(7, 4, 2, 1);
     stages.push(c);
     // 2 生长
     ({ c, x } = cv(TS, TS));
@@ -1576,10 +1581,17 @@ window.G = window.G || {};
   function tileSoil(wet) {
     const { c, x } = cv(TS, TS);
     x.fillStyle = wet ? '#5a3f28' : '#8a6a42'; x.fillRect(0, 0, TS, TS);
+    // 土块噪点 + 浅沟，弱化"木板"感
+    for (let i = 0; i < 9; i++) {
+      const rx = Math.floor(hash(i * 13, i * 7) * TS), ry = Math.floor(hash(i * 5, i * 17) * TS);
+      x.fillStyle = wet ? '#4a3320' : '#77573a'; x.fillRect(rx, ry, 2, 1);
+    }
+    for (let i = 0; i < 6; i++) {
+      const rx = Math.floor(hash(i * 3 + 5, i * 11 + 1) * TS), ry = Math.floor(hash(i * 19, i * 3 + 9) * TS);
+      x.fillStyle = wet ? '#6b4d30' : '#9a7a50'; x.fillRect(rx, ry, 1, 1);
+    }
     x.fillStyle = wet ? '#4a3320' : '#77573a';
-    x.fillRect(0, 3, TS, 1); x.fillRect(0, 8, TS, 1); x.fillRect(0, 13, TS, 1);
-    x.fillStyle = wet ? '#6b4d30' : '#9a7a50';
-    x.fillRect(0, 1, TS, 1); x.fillRect(0, 6, TS, 1); x.fillRect(0, 11, TS, 1);
+    x.fillRect(0, 5, TS, 1); x.fillRect(0, 11, TS, 1);
     return c;
   }
   function tilePier() {
@@ -2970,6 +2982,7 @@ window.G = window.G || {};
   UI.fadeAlpha = 0;
   UI.transition = function (cb) {
     G.paused = true;
+    $('#toasts').innerHTML = '';
     const start = performance.now();
     const step = () => {
       const t = (performance.now() - start) / 220;
@@ -3416,6 +3429,20 @@ window.G = window.G || {};
     x.fillRect(20, fy - 2, 4, 4);
     x.fillRect(36, fy - 3, 3, 6);
     x.fillStyle = '#2a2018'; x.fillRect(26, fy - 2, 2, 2);
+    // 等待期：浮标与涟漪动画
+    if (G.fishing.phase === 'wait' && !G.fishing.bite) {
+      const bob = Math.sin(performance.now() / 240) * 2;
+      const bx = 96 + Math.sin(performance.now() / 600) * 24, by = 130 + bob;
+      x.strokeStyle = 'rgba(255,255,255,0.35)';
+      x.lineWidth = 1;
+      const rip = 4 + (performance.now() / 300 % 1) * 14;
+      x.beginPath(); x.arc(bx, by, rip, 0, Math.PI * 2); x.stroke();
+      x.fillStyle = '#e0453a'; x.fillRect(bx - 3, by - 6 + bob, 6, 6);
+      x.fillStyle = '#f5f0e0'; x.fillRect(bx - 2, by + bob, 4, 3);
+      x.fillStyle = 'rgba(255,255,255,0.6)';
+      x.font = '11px sans-serif'; x.textAlign = 'center';
+      x.fillText('等待鱼儿咬钩…', W / 2, 90);
+    }
     // 鱼框
     const by = G.fishing.barY, BH = 42;
     x.strokeStyle = G.fishing.holding ? '#8fd45a' : '#e8e8e8';
@@ -3591,6 +3618,9 @@ window.G = window.G || {};
     setupTouch();
     setupKeys();
     setupButtons();
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      document.getElementById('start-foot').textContent = '📱 触屏：左侧摇杆移动 · 「互动 / 工具」按钮操作 · 自动保存';
+    }
     $('#btn-new').addEventListener('click', () => UI.startGame(true));
     $('#btn-continue').addEventListener('click', () => UI.startGame(false));
     $('#btn-help').addEventListener('click', () => UI.openPanel('help'));
